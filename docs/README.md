@@ -59,4 +59,4 @@ This folder contains all the design and analysis documentation for the **Student
 - All diagrams are **logical representations** (not physical implementations).  
 - Narratives for each diagram are included in the main project report under **Chapter 4: System Analysis and Design**.  
 - Files are organized for easy reference and supervisor review.  
-"# Documentation: diagrams, UI mockups, etc." 
+
