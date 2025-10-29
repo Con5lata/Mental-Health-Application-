@@ -1,0 +1,18 @@
+/*
+!student_app/
+!.gitignore
+/Android_App
+# Build outputs
+build/
+android/app/build/
+*.apk
+*.aab
+*.dill
+*.so
+
+# Flutter specific
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
