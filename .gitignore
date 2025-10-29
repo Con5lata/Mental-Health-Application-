@@ -1,7 +1,22 @@
-/*
-!student_app/
-!.gitignore
-/Android_App
+# Ignore build outputs and dependencies, but not source code
+# Build outputs
+build/
+android/app/build/
+*.apk
+*.aab
+*.dill
+*.so
+
+# Flutter specific
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+# Node.js dependencies
+node_modules/
+# Do not ignore source code folders
+# Add more rules as needed for other generated files
 # Build outputs
 build/
 android/app/build/

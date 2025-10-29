@@ -1,0 +1,120 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isCounsellor() {
+      return isAuthenticated() && 
+        (request.auth.token.role == 'counsellor' || request.auth.token.role == 'admin');
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
+    }
+    
+    function isActive() {
+      return isAuthenticated() && 
+        (request.auth.token.role == 'admin' || 
+         (resource.data.isActive == true || !('isActive' in resource.data)));
+    }
+    
+    function isValidUser(userId) {
+      return isAuthenticated() && 
+        (request.auth.uid == userId || request.auth.token.role == 'admin');
+    }
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Appointments collection
+    match /appointments/{appointmentId} {
+      allow read: if isCounsellor() && 
+        (resource.data.counsellorId == request.auth.uid || isAdmin());
+      allow create: if isCounsellor();
+      allow update: if isCounsellor() && 
+        (resource.data.counsellorId == request.auth.uid || isAdmin());
+      allow delete: if isCounsellor() && 
+        (resource.data.counsellorId == request.auth.uid || isAdmin());
+    }
+
+    // Journals collection
+    match /journals/{journalId} {
+      allow read: if isCounsellor();
+      allow create: if isCounsellor();
+      allow update: if isCounsellor() && 
+        (resource.data.createdBy == request.auth.uid || isAdmin());
+      allow delete: if isCounsellor() && 
+        (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    // Q&A collection
+    match /qna/{questionId} {
+      allow read: if true; // Public read access for anonymous questions
+      allow create: if true; // Allow anonymous questions
+      allow update: if isCounsellor() && 
+        (resource.data.studentId == request.auth.uid || 
+         resource.data.studentId == null || isAdmin());
+      allow delete: if isCounsellor() && 
+        (resource.data.studentId == request.auth.uid || 
+         resource.data.studentId == null || isAdmin());
+    }
+
+    // Resources collection
+    match /resources/{resourceId} {
+      allow read: if resource.data.isPublic == true || isCounsellor();
+      allow create: if isCounsellor();
+      allow update: if isCounsellor() && 
+        (resource.data.createdBy == request.auth.uid || isAdmin());
+      allow delete: if isCounsellor() && 
+        (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    // Reports collection
+    match /reports/{reportId} {
+      allow read: if isCounsellor() && 
+        (resource.data.isPublic == true || 
+         resource.data.generatedBy == request.auth.uid || isAdmin());
+      allow create: if isCounsellor();
+      allow update: if isCounsellor() && 
+        (resource.data.generatedBy == request.auth.uid || isAdmin());
+      allow delete: if isCounsellor() && 
+        (resource.data.generatedBy == request.auth.uid || isAdmin());
+    }
+
+    // Moods collection (for mood tracking)
+    match /moods/{moodId} {
+      allow read: if isCounsellor();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && 
+        (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
+    // Answers collection (for Q&A responses)
+    match /answers/{answerId} {
+      allow read: if isCounsellor();
+      allow create: if isCounsellor();
+      allow update: if isCounsellor() && 
+        (resource.data.answeredBy == request.auth.uid || isAdmin());
+      allow delete: if isCounsellor() && 
+        (resource.data.answeredBy == request.auth.uid || isAdmin());
+    }
+
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
