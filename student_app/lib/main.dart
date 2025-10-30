@@ -99,8 +99,9 @@ class MyApp extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
         ),
       ),
-  home: const LoginScreen(),
+      home: const LoginScreen(),
     );
+// Example function to request an appointment
   }
 }
 
