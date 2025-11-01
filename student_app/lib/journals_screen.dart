@@ -8,7 +8,7 @@ import 'support_screen.dart';
 import 'bottom_nav_bar.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'new_journal_entry_screen.dart';
-import 'journal_detail_screen.dart'; // ✅ Add this line
+import 'journal_detail_screen.dart';
 
 class JournalsScreen extends StatefulWidget {
   const JournalsScreen({super.key});
@@ -20,8 +20,9 @@ class JournalsScreen extends StatefulWidget {
 class _JournalsScreenState extends State<JournalsScreen> {
   final _searchController = TextEditingController();
   int _selectedIndex = 1;
+  String _searchQuery = '';
 
-  // Replace this with FirebaseAuth.instance.currentUser!.uid in real use
+  // Replace with FirebaseAuth.instance.currentUser!.uid in real use
   final String defaultUserId = '61xtbNAWg1gYxOH9lMCZ8u2Sxq23';
 
   @override
@@ -73,9 +74,20 @@ class _JournalsScreenState extends State<JournalsScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: theme.scaffoldBackgroundColor,
-        title: Align(
-          alignment: Alignment.centerLeft,
-          child: Text('Journals', style: theme.textTheme.titleLarge),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Journals',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.black87,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -98,6 +110,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
       ),
       body: Column(
         children: [
+          // 🔍 Search Bar (same layout, added logic)
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -111,16 +124,22 @@ class _JournalsScreenState extends State<JournalsScreen> {
                 ),
                 filled: true,
                 fillColor: Colors.white,
-                prefixIcon:
-                    Icon(Icons.search, color: theme.colorScheme.secondary),
+                prefixIcon: Icon(Icons.search, color: theme.colorScheme.secondary),
                 contentPadding: const EdgeInsets.symmetric(
                   vertical: 16.0,
                   horizontal: 20.0,
                 ),
               ),
               style: GoogleFonts.poppins(color: theme.colorScheme.onSurface),
+              onChanged: (value) {
+                setState(() {
+                  _searchQuery = value.toLowerCase();
+                });
+              },
             ),
           ),
+
+          // 🧠 Journal Entries (filtered by title, entry, or date)
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -131,10 +150,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(
-                    child: Text(
-                      'Error: ${snapshot.error}',
-                      style: GoogleFonts.poppins(),
-                    ),
+                    child: Text('Error: ${snapshot.error}', style: GoogleFonts.poppins()),
                   );
                 }
 
@@ -142,39 +158,52 @@ class _JournalsScreenState extends State<JournalsScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (snapshot.data!.docs.isEmpty) {
+                final docs = snapshot.data!.docs;
+
+                // Filter results by search
+                final filteredDocs = docs.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final entryText = (data['entry'] ?? '').toString().toLowerCase();
+                  final createdAt =
+                      (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+                  final formattedDate =
+                      DateFormat('MMMM d, yyyy').format(createdAt).toLowerCase();
+
+                  // Title (first 5 words from entry)
+                  final title = entryText.split(' ').take(5).join(' ');
+
+                  return _searchQuery.isEmpty ||
+                      entryText.contains(_searchQuery) ||
+                      title.contains(_searchQuery) ||
+                      formattedDate.contains(_searchQuery);
+                }).toList();
+
+                if (filteredDocs.isEmpty) {
                   return Center(
                     child: Text(
-                      'No journal entries yet. Start writing!',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        color: theme.hintColor,
-                      ),
+                      'No journal entries found.',
+                      style: GoogleFonts.poppins(fontSize: 16, color: theme.hintColor),
                     ),
                   );
                 }
 
                 return ListView.builder(
                   padding: const EdgeInsets.only(bottom: 80.0),
-                  itemCount: snapshot.data!.docs.length,
+                  itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
-                    final doc = snapshot.data!.docs[index];
+                    final doc = filteredDocs[index];
                     final journal = doc.data() as Map<String, dynamic>;
 
                     final entryText = journal['entry'] ?? '';
                     final title =
                         entryText.toString().split(' ').take(5).join(' ');
                     final createdAt =
-                        (journal['created_at'] as Timestamp?)?.toDate() ??
-                            DateTime.now();
+                        (journal['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
                     final formattedDate =
                         DateFormat('MMMM d, yyyy').format(createdAt);
 
                     return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16.0,
-                        vertical: 8.0,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                       child: Card(
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12.0),
@@ -196,19 +225,15 @@ class _JournalsScreenState extends State<JournalsScreen> {
                               const SizedBox(height: 8),
                               Text(
                                 entryText.split(' ').take(20).join(' ') +
-                                    (entryText.split(' ').length > 20
-                                        ? '...'
-                                        : ''),
+                                    (entryText.split(' ').length > 20 ? '...' : ''),
                                 style: GoogleFonts.poppins(
                                   fontSize: 15,
-                                  color: theme.colorScheme.onSurface
-                                      .withOpacity(0.8),
+                                  color: theme.colorScheme.onSurface.withOpacity(0.8),
                                 ),
                               ),
                               const SizedBox(height: 12),
                               Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
                                     formattedDate,
@@ -222,8 +247,8 @@ class _JournalsScreenState extends State<JournalsScreen> {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) =>
-                                              JournalDetailScreen(
+                                          builder: (context) => JournalDetailScreen(
+                                            id: doc.id,
                                             title: title,
                                             entry: entryText,
                                             createdAt: createdAt,
