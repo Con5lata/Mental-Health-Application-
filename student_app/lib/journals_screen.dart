@@ -22,7 +22,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
   int _selectedIndex = 1;
   String _searchQuery = '';
 
-  // Replace with FirebaseAuth.instance.currentUser!.uid in real use
+  // TODO: Replace this with FirebaseAuth.instance.currentUser!.uid in production
   final String defaultUserId = '61xtbNAWg1gYxOH9lMCZ8u2Sxq23';
 
   @override
@@ -32,35 +32,25 @@ class _JournalsScreenState extends State<JournalsScreen> {
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
     switch (index) {
       case 0:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-        );
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()));
         break;
       case 1:
         break;
       case 2:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const AppointmentsScreen()),
-        );
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) => const AppointmentsScreen()));
         break;
       case 3:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const ResourcesScreen()),
-        );
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) => const ResourcesScreen()));
         break;
       case 4:
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const SupportScreen()),
-        );
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (context) => const SupportScreen()));
         break;
     }
   }
@@ -74,26 +64,15 @@ class _JournalsScreenState extends State<JournalsScreen> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: theme.scaffoldBackgroundColor,
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Journals',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  color: Colors.black87,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        title: Text(
+          'Journals',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.black87,
+          ),
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.search, color: theme.colorScheme.primary),
-            onPressed: () {},
-          ),
           IconButton(
             icon: Icon(Icons.add, color: theme.colorScheme.primary),
             tooltip: 'New Entry',
@@ -101,8 +80,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const NewJournalEntryScreen(),
-                ),
+                    builder: (context) => const NewJournalEntryScreen()),
               );
             },
           ),
@@ -110,7 +88,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
       ),
       body: Column(
         children: [
-          // 🔍 Search Bar (same layout, added logic)
+          // 🔍 Search Bar
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: TextField(
@@ -124,22 +102,19 @@ class _JournalsScreenState extends State<JournalsScreen> {
                 ),
                 filled: true,
                 fillColor: Colors.white,
-                prefixIcon: Icon(Icons.search, color: theme.colorScheme.secondary),
+                prefixIcon:
+                    Icon(Icons.search, color: theme.colorScheme.secondary),
                 contentPadding: const EdgeInsets.symmetric(
-                  vertical: 16.0,
-                  horizontal: 20.0,
-                ),
+                    vertical: 16.0, horizontal: 20.0),
               ),
               style: GoogleFonts.poppins(color: theme.colorScheme.onSurface),
               onChanged: (value) {
-                setState(() {
-                  _searchQuery = value.toLowerCase();
-                });
+                setState(() => _searchQuery = value.toLowerCase());
               },
             ),
           ),
 
-          // 🧠 Journal Entries (filtered by title, entry, or date)
+          // 📖 Journal Entries
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
@@ -150,8 +125,8 @@ class _JournalsScreenState extends State<JournalsScreen> {
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return Center(
-                    child: Text('Error: ${snapshot.error}', style: GoogleFonts.poppins()),
-                  );
+                      child: Text('Error: ${snapshot.error}',
+                          style: GoogleFonts.poppins()));
                 }
 
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -160,16 +135,16 @@ class _JournalsScreenState extends State<JournalsScreen> {
 
                 final docs = snapshot.data!.docs;
 
-                // Filter results by search
+                // 🔎 Filtered Results
                 final filteredDocs = docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  final entryText = (data['entry'] ?? '').toString().toLowerCase();
+                  final entryText =
+                      (data['entry'] ?? '').toString().toLowerCase();
                   final createdAt =
-                      (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+                      (data['created_at'] as Timestamp?)?.toDate() ??
+                          DateTime.now();
                   final formattedDate =
                       DateFormat('MMMM d, yyyy').format(createdAt).toLowerCase();
-
-                  // Title (first 5 words from entry)
                   final title = entryText.split(' ').take(5).join(' ');
 
                   return _searchQuery.isEmpty ||
@@ -180,10 +155,9 @@ class _JournalsScreenState extends State<JournalsScreen> {
 
                 if (filteredDocs.isEmpty) {
                   return Center(
-                    child: Text(
-                      'No journal entries found.',
-                      style: GoogleFonts.poppins(fontSize: 16, color: theme.hintColor),
-                    ),
+                    child: Text('No journal entries found.',
+                        style: GoogleFonts.poppins(
+                            fontSize: 16, color: theme.hintColor)),
                   );
                 }
 
@@ -198,75 +172,96 @@ class _JournalsScreenState extends State<JournalsScreen> {
                     final title =
                         entryText.toString().split(' ').take(5).join(' ');
                     final createdAt =
-                        (journal['created_at'] as Timestamp?)?.toDate() ?? DateTime.now();
+                        (journal['created_at'] as Timestamp?)?.toDate() ??
+                            DateTime.now();
                     final formattedDate =
                         DateFormat('MMMM d, yyyy').format(createdAt);
 
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 8.0),
                       child: Card(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                        ),
+                            borderRadius: BorderRadius.circular(12.0)),
                         elevation: 2,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                title.isNotEmpty ? title : 'Untitled entry',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                  color: theme.colorScheme.onSurface,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => JournalDetailScreen(
+                                  id: doc.id,
+                                  title: title,
+                                  entry: entryText,
+                                  createdAt: createdAt,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Text(
-                                entryText.split(' ').take(20).join(' ') +
-                                    (entryText.split(' ').length > 20 ? '...' : ''),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 15,
-                                  color: theme.colorScheme.onSurface.withOpacity(0.8),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    formattedDate,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      color: theme.hintColor,
-                                    ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  title.isNotEmpty ? title : 'Untitled entry',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                    color: theme.colorScheme.onSurface,
                                   ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => JournalDetailScreen(
-                                            id: doc.id,
-                                            title: title,
-                                            entry: entryText,
-                                            createdAt: createdAt,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    child: Text(
-                                      'Read more',
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  entryText.split(' ').take(20).join(' ') +
+                                      (entryText.split(' ').length > 20
+                                          ? '...'
+                                          : ''),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.8),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      formattedDate,
                                       style: GoogleFonts.poppins(
-                                        color: theme.colorScheme.primary,
-                                        fontWeight: FontWeight.w500,
+                                          fontSize: 14,
+                                          color: theme.hintColor),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                JournalDetailScreen(
+                                              id: doc.id,
+                                              title: title,
+                                              entry: entryText,
+                                              createdAt: createdAt,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                      child: Text(
+                                        'Read more',
+                                        style: GoogleFonts.poppins(
+                                          color: theme.colorScheme.primary,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -283,8 +278,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const NewJournalEntryScreen(),
-            ),
+                builder: (context) => const NewJournalEntryScreen()),
           );
         },
         backgroundColor: theme.colorScheme.primary,
