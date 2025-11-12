@@ -1,9 +1,8 @@
-import 'dart:convert';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:crypto/crypto.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'verify_otp_screen.dart'; // <-- new screen
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -34,64 +33,55 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  // 🔹 Generate 6-digit OTP
+  String _generateOtp() {
+    final random = Random();
+    return (100000 + random.nextInt(900000)).toString();
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
-      final credential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      final otp = _generateOtp();
+
+      // Save new user info to Firestore 'users' collection
+      final userId = FirebaseFirestore.instance.collection('users').doc().id;
+      await FirebaseFirestore.instance.collection('users').doc(userId).set({
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'password_hash': _passwordController.text.trim(), // Replace with actual hash in production
+        'role': 'student',
+        'created_at': FieldValue.serverTimestamp(),
+        'user_id': userId,
+      });
+
+      // TODO: Call your backend endpoint to send OTP via email
+      // Example: await sendOtpToEmail(_emailController.text.trim(), otp);
+
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          content: Text('OTP sent to your email.'),
+          backgroundColor: Colors.green,
+        ),
       );
 
-      final user = credential.user;
-      if (user != null) {
-        await user.sendEmailVerification();
-
-        // Hash password using SHA256
-        final passwordBytes = utf8.encode(_passwordController.text.trim());
-        final hashedPassword = sha256.convert(passwordBytes).toString();
-
-        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-          'user_id': user.uid,
-          'name': _nameController.text.trim(),
-          'email': user.email,
-          'phone': _phoneController.text.trim(),
-          'role': 'student',
-          'password_hash': hashedPassword,
-          'created_at': FieldValue.serverTimestamp(),
-        });
-
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            content: Text('Registration successful! Please verify your email.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        navigator.pop();
-      }
-    } on FirebaseAuthException catch (e) {
-      String message;
-      switch (e.code) {
-        case 'weak-password':
-          message = 'The password provided is too weak.';
-          break;
-        case 'email-already-in-use':
-          message = 'An account already exists for that email.';
-          break;
-        case 'invalid-email':
-          message = 'Invalid email address.';
-          break;
-        default:
-          message = 'An error occurred. Please try again.';
-      }
+      // Navigate to OTP verification screen
+      navigator.push(MaterialPageRoute(
+        builder: (_) => VerifyOtpScreen(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+          otp: otp,
+        ),
+      ));
+    } catch (e) {
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
+        SnackBar(content: Text('Error: ${e.toString()}'), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -245,9 +235,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                             ),
-
                       const SizedBox(height: 16.0),
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -276,4 +264,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+}
+
+void main() {
+  runApp(MaterialApp(
+    title: 'Your App Title',
+    theme: ThemeData(
+      primarySwatch: Colors.blue,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+    ),
+    home: const RegisterScreen(),
+  ));
 }
