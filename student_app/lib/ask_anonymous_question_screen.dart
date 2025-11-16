@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'env.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AskAnonymousQuestionScreen extends StatefulWidget {
@@ -26,14 +29,49 @@ class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen>
     setState(() => _isSubmitting = true);
 
     try {
+      // 🔹 Step 1: Send the question to Gemini
+      final response = await http.post(
+        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$geminiApiKey'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          "contents": [
+            {
+              "parts": [
+                {"text": questionText}
+              ]
+            }
+          ]
+        }),
+      );
+
+      // Debug: Print the HTTP status and response body
+      print('Gemini status: \\${response.statusCode}');
+      print('Gemini response: \\${response.body}');
+
+      print('OpenAI response: ${response.body}');
+
+      final data = jsonDecode(response.body);
+      String answer = '';
+      if (data['candidates'] != null && data['candidates'].isNotEmpty) {
+        final candidate = data['candidates'][0];
+        if (candidate['content'] != null && candidate['content']['parts'] != null && candidate['content']['parts'].isNotEmpty) {
+          answer = candidate['content']['parts'][0]['text']?.toString() ?? '';
+        }
+      }
+      bool chatbotFailed = answer.isEmpty;
+
+      // 🔹 Step 2: Save to Firestore
       await FirebaseFirestore.instance.collection('qna').add({
         'question': questionText,
         'author_id': 'anonymous',
         'created_at': Timestamp.now(),
-        'status': 'open',
-        'response': '',
+        'status': chatbotFailed ? 'needs_review' : 'answered',
+        'response': answer,
       });
 
+      // 🔹 Step 3: Show confirmation
       if (mounted) {
         _questionController.clear();
         _hasTyped = false;
@@ -42,8 +80,10 @@ class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen>
           builder: (_) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: const Text('Question Submitted!'),
-            content: const Text(
-              'Your question has been sent anonymously. You can view answers in the Support & Q&A section soon.',
+            content: Text(
+              chatbotFailed
+                  ? 'Your question has been sent for review by our support team.'
+                  : 'Your question has been answered by our AI assistant and saved in the Support & Q&A section.',
             ),
             actions: [
               TextButton(
