@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'chatbot_service.dart';
 
 class AskAnonymousQuestionScreen extends StatefulWidget {
   const AskAnonymousQuestionScreen({super.key});
@@ -12,52 +13,43 @@ class AskAnonymousQuestionScreen extends StatefulWidget {
 class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen> {
   final TextEditingController _questionController = TextEditingController();
   bool _isSubmitting = false;
+  String _aiResponse = '';
   bool _hasTyped = false;
 
   Future<void> _submitQuestion() async {
     final questionText = _questionController.text.trim();
-    if (questionText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your question.')),
-      );
-      return;
-    }
-
-    setState(() => _isSubmitting = true);
-
+    if (questionText.isEmpty) return;
+  
+    setState(() {
+      _isSubmitting = true;
+      _aiResponse = '';
+    });
+  
     try {
-      // Save to Firestore for manual review
+      // 🔹 Get AI response from backend
+      final aiResponse = await ChatbotService.getResponse(questionText);
+  
+      // 🔹 Save to Firestore
       await FirebaseFirestore.instance.collection('qna').add({
         'question': questionText,
         'author_id': 'anonymous',
         'created_at': Timestamp.now(),
-        'status': 'needs_review',
-        'response': '',
+        'status': 'answered',
+        'response': aiResponse,
       });
-
-      // 🔹 Step 3: Show confirmation
+  
+      // 🔹 Update UI
       if (mounted) {
-        _questionController.clear();
-        _hasTyped = false;
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: const Text('Question Submitted!'),
-            content: const Text('Your question has been sent for review by our support team.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
+        setState(() {
+          _aiResponse = aiResponse;
+          _questionController.clear();
+          _hasTyped = false;
+        });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Failed: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -99,14 +91,14 @@ class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen>
               'Ask an Anonymous Question',
               style: GoogleFonts.poppins(
                 fontWeight: FontWeight.bold,
-                fontSize: 22,
+                fontSize: 20,
                 color: theme.colorScheme.onSurface,
               ),
             ),
           ),
         ),
         body: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -118,7 +110,7 @@ class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen>
                   height: 1.5,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               Text(
                 'Your Question',
                 style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w600),
@@ -148,7 +140,7 @@ class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen>
                   ),
                 ),
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -176,6 +168,37 @@ class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen>
                         ),
                 ),
               ),
+              const SizedBox(height: 24),
+              if (_aiResponse.isNotEmpty)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: theme.colorScheme.primary.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Our AI Assistant Says:',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.primary,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _aiResponse,
+                        style: GoogleFonts.poppins(fontSize: 14, height: 1.6),
+                      ),
+                    ],
+                  ),
+                ),
             ],
           ),
         ),
