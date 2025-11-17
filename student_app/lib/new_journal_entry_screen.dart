@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class NewJournalEntryScreen extends StatefulWidget {
   const NewJournalEntryScreen({super.key});
@@ -11,12 +12,20 @@ class NewJournalEntryScreen extends StatefulWidget {
 
 class _NewJournalEntryScreenState extends State<NewJournalEntryScreen> {
   final TextEditingController _entryController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
   final List<String> _tags = ['Stress', 'Study', 'Reflection'];
   final List<String> _selectedTags = [];
   bool _isSaving = false;
 
-  final String defaultUserId = '61xtbNAWg1gYxOH9lMCZ8u2Sxq23'; // Mock user
+  final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
+  @override
+  void dispose() {
+    _entryController.dispose();
+    _titleController.dispose();
+    super.dispose();
+  }
+  
   void _toggleTag(String tag) {
     setState(() {
       _selectedTags.contains(tag)
@@ -35,17 +44,32 @@ class _NewJournalEntryScreenState extends State<NewJournalEntryScreen> {
   }
 
   Future<void> _saveEntry() async {
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You must be logged in to save an entry.')),
+      );
+      return;
+    }
+
     final entryText = _entryController.text.trim();
-    if (entryText.isEmpty) return;
+    final titleText = _titleController.text.trim();
+
+    if (entryText.isEmpty || titleText.isEmpty) return;
 
     setState(() => _isSaving = true);
 
     try {
       await FirebaseFirestore.instance.collection('journals').add({
+        'title': titleText,
         'entry': entryText,
         'tags': _selectedTags,
         'created_at': Timestamp.now(),
-        'user_id': defaultUserId,
+        'user_id': userId,
+        // Add a placeholder sentiment field to ensure the field always exists.
+        'sentiment': {
+          'analysis_status': 'pending',
+          'status': 'pending',
+        },
       });
 
       if (mounted) Navigator.of(context).pop();
@@ -130,10 +154,46 @@ class _NewJournalEntryScreenState extends State<NewJournalEntryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ✨ Title Field
+            Text(
+              "Title",
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TextField(
+                controller: _titleController,
+                style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w500),
+                decoration: InputDecoration(
+                  hintText: 'e.g., A challenging day',
+                  hintStyle: GoogleFonts.poppins(color: Colors.grey[500]),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ✨ Entry Field
             Text(
               "How are you feeling today?",
               style: GoogleFonts.poppins(
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
               ),

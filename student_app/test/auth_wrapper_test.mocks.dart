@@ -299,7 +299,6 @@ class MockUser extends _i1.Mock implements _i3.User {
           )
           as _i5.Future<_i3.User>);
 
-  @override
   _i5.Future<void> updateEmail(String? newEmail) =>
       (super.noSuchMethod(
             Invocation.method(#updateEmail, [newEmail]),

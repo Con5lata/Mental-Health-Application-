@@ -43,27 +43,19 @@ class _HomeScreenState extends State<HomeScreen> {
         .limit(1)
         .get();
 
+    String nameToSet;
     if (query.docs.isNotEmpty) {
       final data = query.docs.first.data();
-      final nameFromDb = data['name']?.toString().trim();
-
-      // ✅ Prefer name from Firestore if available
-      if (nameFromDb != null && nameFromDb.isNotEmpty) {
-        if (mounted) setState(() => _userName = nameFromDb);
-      } else {
-        // Fall back to display name or email prefix
-        final fallbackName = user.displayName?.split(' ').first ??
-            user.email?.split('@').first ??
-            'User';
-        if (mounted) setState(() => _userName = fallbackName);
-      }
+      nameToSet = data['name']?.toString().trim() ?? '';
     } else {
-      // No document found, use fallback
-      final fallbackName = user.displayName?.split(' ').first ??
-          user.email?.split('@').first ??
-          'User';
-      if (mounted) setState(() => _userName = fallbackName);
+      nameToSet = '';
     }
+
+    // Use the name from the database, or fall back to Auth display name, then email.
+    if (nameToSet.isEmpty) {
+      nameToSet = user.displayName?.split(' ').first ?? user.email?.split('@').first ?? 'User';
+    }
+    if (mounted) setState(() => _userName = nameToSet);
 
     // 🔹 Fetch next upcoming appointment
     final appointmentsQuery = await FirebaseFirestore.instance

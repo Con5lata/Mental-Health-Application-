@@ -8,6 +8,7 @@ class JournalDetailScreen extends StatefulWidget {
   final String title;
   final String entry;
   final DateTime createdAt;
+  final Map<String, dynamic>? sentiment;
 
   const JournalDetailScreen({
     super.key,
@@ -15,6 +16,7 @@ class JournalDetailScreen extends StatefulWidget {
     required this.title,
     required this.entry,
     required this.createdAt,
+    this.sentiment,
   });
 
   @override
@@ -42,12 +44,17 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
   }
 
   Future<void> _updateJournal() async {
+    // Prepare the data to update, preserving the existing sentiment if available.
+    final Map<String, dynamic> updateData = {
+      'title': titleController.text.trim(),
+      'entry': entryController.text.trim(),
+      'updatedAt': DateTime.now(),
+    };
+
     try {
-      await FirebaseFirestore.instance.collection('journals').doc(widget.id).update({
-        'title': titleController.text.trim(),
-        'entry': entryController.text.trim(),
-        'updatedAt': DateTime.now(),
-      });
+      // Use `set` with `merge: true` to safely update the document
+      // without overwriting existing fields like 'sentiment' or 'tags'.
+      await FirebaseFirestore.instance.collection('journals').doc(widget.id).set(updateData, SetOptions(merge: true));
 
       setState(() {
         isEditing = false;
@@ -94,6 +101,39 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
     }
   }
 
+  Widget _buildSentimentChip() {
+    // If sentiment is null or has a 'pending' status, show Analyzing/Pending.
+    if (widget.sentiment == null) {
+      return const Chip(
+          label: Text('🤔 Analyzing...'), backgroundColor: Color(0xFFE0E0E0));
+    }
+
+    if (widget.sentiment!['status'] == 'pending' ||
+        widget.sentiment!['error'] != null ||
+        widget.sentiment!['normalized'] == null) {
+      return const Chip(
+          label: Text('🤔 Pending...'), backgroundColor: Color(0xFFE0E0E0));
+    }
+
+    final normalized = (widget.sentiment!['normalized'] as num).toDouble();
+    final String emoji;
+    final String label;
+
+    if (normalized > 0.3) {
+      emoji = '😄';
+      label = 'Positive';
+    } else if (normalized < -0.3) {
+      emoji = '😢';
+      label = 'Negative';
+    } else {
+      emoji = '😐';
+      label = 'Neutral';
+    }
+
+    return Chip(
+        label: Text('$emoji $label'), backgroundColor: const Color(0xFFE0E0E0));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -129,9 +169,12 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
                       child: const Text('Cancel'),
                       onPressed: () => Navigator.pop(context, false),
                     ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-                      child: const Text('Delete'),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.red.withOpacity(0.1),
+                        foregroundColor: Colors.red,
+                      ),
+                      child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
                       onPressed: () => Navigator.pop(context, true),
                     ),
                   ],
@@ -181,6 +224,7 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
                         backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
                         visualDensity: VisualDensity.compact,
                       ),
+                      _buildSentimentChip(),
                     ],
                   ),
                   const SizedBox(height: 16),
