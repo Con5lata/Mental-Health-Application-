@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AskAnonymousQuestionScreen extends StatefulWidget {
@@ -26,14 +26,16 @@ class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen>
     setState(() => _isSubmitting = true);
 
     try {
+      // Save to Firestore for manual review
       await FirebaseFirestore.instance.collection('qna').add({
         'question': questionText,
         'author_id': 'anonymous',
         'created_at': Timestamp.now(),
-        'status': 'open',
+        'status': 'needs_review',
         'response': '',
       });
 
+      // 🔹 Step 3: Show confirmation
       if (mounted) {
         _questionController.clear();
         _hasTyped = false;
@@ -42,9 +44,7 @@ class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen>
           builder: (_) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: const Text('Question Submitted!'),
-            content: const Text(
-              'Your question has been sent anonymously. You can view answers in the Support & Q&A section soon.',
-            ),
+            content: const Text('Your question has been sent for review by our support team.'),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
