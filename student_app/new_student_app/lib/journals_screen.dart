@@ -11,7 +11,6 @@ import 'bottom_nav_bar.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'new_journal_entry_screen.dart';
 import 'journal_detail_screen.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 
 class JournalsScreen extends StatefulWidget {
   const JournalsScreen({super.key});
@@ -60,35 +59,8 @@ class _JournalsScreenState extends State<JournalsScreen> {
   void _openSentimentGraph() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => SentimentGraphScreen(userId: userId ?? '')),
+      MaterialPageRoute(builder: (context) => const SentimentGraphScreen()),
     );
-  }
-
-  Future<void> _runBackfill() async {
-    // Show a loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
-    try {
-      final callable = FirebaseFunctions.instance.httpsCallable('backfillSentimentData');
-      final result = await callable.call();
-      Navigator.pop(context); // Close loading dialog
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.data['message'] ?? 'Processing started!')),
-      );
-    } on FirebaseFunctionsException catch (e) {
-      Navigator.pop(context); // Close loading dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message}')),
-      );
-    } catch (e) {
-      Navigator.pop(context); // Close loading dialog
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('An unknown error occurred.')));
-    }
   }
 
   @override
@@ -102,7 +74,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
         backgroundColor: theme.scaffoldBackgroundColor,
         title: Text(
           'Journals',
-          style: GoogleFonts.poppins(
+          style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 20,
             color: Colors.black87,
@@ -114,11 +86,6 @@ class _JournalsScreenState extends State<JournalsScreen> {
             tooltip: 'View Sentiment Graph',
             onPressed: _openSentimentGraph,
           ),
-          IconButton(
-            icon: Icon(Icons.history, color: theme.colorScheme.secondary),
-            tooltip: 'Analyze Old Entries',
-            onPressed: _runBackfill,
-          ),
         ],
       ),
       body: Column(
@@ -129,19 +96,19 @@ class _JournalsScreenState extends State<JournalsScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: 'Search entries…',
-                labelStyle: GoogleFonts.poppins(color: theme.hintColor),
+                labelText: 'Search entries…', 
+                labelStyle: TextStyle(color: theme.hintColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12.0),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
                 fillColor: Colors.white,
-                prefixIcon: Icon(Icons.search, color: theme.colorScheme.secondary),
+                prefixIcon: Icon(Icons.search, color: theme.colorScheme.secondary), 
                 contentPadding:
                     const EdgeInsets.symmetric(vertical: 16.0, horizontal: 20.0),
               ),
-              style: GoogleFonts.poppins(color: theme.colorScheme.onSurface),
+              style: TextStyle(color: theme.colorScheme.onSurface),
               onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
             ),
           ),
@@ -152,7 +119,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
                 ? Center(
                     child: Text(
                   'Please log in to see your journals.',
-                  style: GoogleFonts.poppins(),
+                  style: const TextStyle(),
                 ))
                 : _JournalList(userId: userId!, searchQuery: _searchQuery),
           ),
@@ -191,8 +158,7 @@ class _JournalList extends StatelessWidget {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(
-              child: Text('Error: ${snapshot.error}', style: GoogleFonts.poppins()));
+          return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle()));
         }
 
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -216,8 +182,7 @@ class _JournalList extends StatelessWidget {
 
         if (filteredDocs.isEmpty) {
           return Center(
-            child: Text('No journal entries found.',
-                style: GoogleFonts.poppins(fontSize: 16, color: theme.hintColor)),
+            child: Text('No journal entries found.', style: TextStyle(fontSize: 16, color: theme.hintColor)),
           );
         }
 
@@ -267,95 +232,106 @@ class _JournalCard extends StatelessWidget {
     final formattedDate = DateFormat('MMMM d, yyyy').format(createdAt);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: Card(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
-        elevation: 2, // A subtle shadow like the support screen
-        shadowColor: Colors.grey.shade200,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12.0),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => JournalDetailScreen(
-                  id: docId,
-                  title: title,
-                  entry: entryText,
-                  createdAt: createdAt,
-                  sentiment: sentiment,
-                ),
-              ),
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600, // Bolder title
-                          color: Colors.black,
-                        ),
-                      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0), // Reduced horizontal and vertical padding
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: 500, // Increase max width for less crowding
+            minWidth: 350, // Ensure card is wider on larger screens
+            minHeight: 80, // Reduce min height for a more compact card
+          ),
+          child: Card(
+            color: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+            elevation: 2,
+            shadowColor: Colors.grey.shade200,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12.0),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => JournalDetailScreen(
+                      id: docId,
+                      title: title,
+                      entry: entryText,
+                      createdAt: createdAt,
+                      sentiment: sentiment,
                     ),
-                    _SentimentIndicator(sentiment: sentiment),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  entryText.split(' ').take(20).join(' ') +
-                      (entryText.split(' ').length > 20 ? '...' : ''),
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.blueGrey.shade800,
-                    height: 1.5,
                   ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0), // Reduced card inner padding
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min, // Allow card to shrink vertically
                   children: [
-                    Text(
-                      formattedDate,
-                      style: GoogleFonts.poppins(
-                          fontSize: 13, color: Colors.grey.shade600),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => JournalDetailScreen(
-                              id: docId,
-                              title: title,
-                              entry: entryText,
-                              createdAt: createdAt,
-                              sentiment: sentiment,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 15, // Slightly smaller title
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
                             ),
                           ),
-                        );
-                      },
-                      child: Text(
-                        'Read more',
-                        style: GoogleFonts.poppins(
-                          color: Colors.blue.shade700,
-                          fontWeight: FontWeight.w600,
                         ),
+                        _SentimentIndicator(sentiment: sentiment),
+                      ],
+                    ),
+                    const SizedBox(height: 6), // Reduced spacing
+                    Text(
+                      entryText.split(' ').take(20).join(' ') +
+                          (entryText.split(' ').length > 20 ? '...' : ''),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.blueGrey,
+                        height: 1.4,
                       ),
+                    ),
+                    const SizedBox(height: 8), // Reduced spacing
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          formattedDate,
+                          style: const TextStyle(
+                            fontSize: 12, color: Colors.grey,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => JournalDetailScreen(
+                                  id: docId,
+                                  title: title,
+                                  entry: entryText,
+                                  createdAt: createdAt,
+                                  sentiment: sentiment,
+                                ),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'Read more',
+                            style: TextStyle(
+                              color: Colors.blue,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -363,6 +339,7 @@ class _JournalCard extends StatelessWidget {
     );
   }
 }
+
 
 class _SentimentIndicator extends StatelessWidget {
   final Map<String, dynamic>? sentiment;
@@ -388,137 +365,165 @@ class _SentimentIndicator extends StatelessWidget {
     return const Text('😐', style: TextStyle(fontSize: 20)); // Neutral
   }
 }
+// 😊 Sentiment Analysis Graph
 
-/// ------------------ Sentiment Graph Screen ------------------
-class SentimentGraphScreen extends StatelessWidget {
-  final String? userId;
-  const SentimentGraphScreen({super.key, required this.userId});
+class SentimentGraphScreen extends StatefulWidget {
+  const SentimentGraphScreen({super.key});
+
+  @override
+  State<SentimentGraphScreen> createState() => _SentimentGraphScreenState();
+}
+
+class _SentimentGraphScreenState extends State<SentimentGraphScreen> {
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  bool _loading = true;
+  List<FlSpot> _spots = [];
+  List<DateTime> _sortedDays = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSentimentData();
+  }
+
+  Future<void> _loadSentimentData() async {
+    try {
+      final query = await _db.collection('journals').get();
+
+      if (query.docs.isEmpty) {
+        setState(() {
+          _loading = false;
+        });
+        return;
+      }
+
+      // Map of day → list of sentiment scores
+      final Map<int, List<double>> dailyScores = {};
+
+      for (var doc in query.docs) {
+        final data = doc.data();
+
+        if (data['created_at'] == null || data['sentiment'] == null) continue;
+
+        final timestamp = data['created_at'] as Timestamp;
+        final day = DateTime(timestamp.toDate().year,
+            timestamp.toDate().month, timestamp.toDate().day);
+        final dayKey = day.millisecondsSinceEpoch;
+
+        final sentimentScore =
+            (data['sentiment']['normalized'] ?? 0.0).toDouble();
+
+        dailyScores.putIfAbsent(dayKey, () => []);
+        dailyScores[dayKey]!.add(sentimentScore);
+      }
+
+      _sortedDays = dailyScores.keys
+          .map((e) => DateTime.fromMillisecondsSinceEpoch(e))
+          .toList()
+        ..sort((a, b) => a.compareTo(b));
+
+      final List<FlSpot> spots = [];
+
+      for (int i = 0; i < _sortedDays.length; i++) {
+        final day = _sortedDays[i];
+        final key =
+            DateTime(day.year, day.month, day.day).millisecondsSinceEpoch;
+
+        final scores = dailyScores[key]!;
+        final avg = scores.reduce((a, b) => a + b) / scores.length;
+
+        spots.add(FlSpot(i.toDouble(), avg));
+      }
+
+      setState(() {
+        _spots = spots;
+        _loading = false;
+      });
+    } catch (e) {
+      print("Error loading sentiment graph: $e");
+      setState(() => _loading = false);
+    }
+  }
+
+  String _emojiForValue(double value) {
+    if (value > 0.3) return "😄";
+    if (value >= -0.3) return "😐";
+    return "😢";
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text('Sentiment Over Time', style: GoogleFonts.poppins()),
-        backgroundColor: theme.scaffoldBackgroundColor,
-        elevation: 0,
+        title: Text(
+          'Mood Trend',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        ),
       ),
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: userId == null
-          ? const Center(child: Text('User not logged in.'))
-          : StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('journals')
-                  .where('user_id', isEqualTo: userId)
-                  .orderBy('created_at')
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  debugPrint("Graph Error: ${snapshot.error}");
-                  return const Center(
-                      child: Text(
-                          'Error loading data. A Firestore index might be missing.'));
-                }
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final docs = snapshot.data?.docs ?? [];
-                if (docs.isEmpty) {
-                  return Center(
-                      child: Text('Write a journal to see your sentiment graph.',
-                          style: GoogleFonts.poppins()));
-                }
-
-                final List<FlSpot> spots = [];
-                for (var doc in docs) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final sentimentData = data['sentiment'] as Map<String, dynamic>?;
-
-                  // ✅ Check if sentiment data is valid and contains the 'normalized' value.
-                  if (sentimentData != null &&
-                      sentimentData['normalized'] is num &&
-                      data['created_at'] is Timestamp) {
-                        
-                    final sentiment = (sentimentData['normalized'] as num).toDouble();
-                    final timestamp =
-                        (data['created_at'] as Timestamp).millisecondsSinceEpoch.toDouble();
-                    spots.add(FlSpot(timestamp, sentiment));
-                  }
-                }
-
-                if (spots.isEmpty) {
-                  return Center(
-                      child: Text('No entries with sentiment data found.',
-                          style: GoogleFonts.poppins()));
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.all(20.0),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _spots.isEmpty
+              ? const Center(
+                  child: Text(
+                    "No sentiment data available yet.",
+                    style: TextStyle(fontSize: 18),
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.all(16.0),
                   child: LineChart(
                     LineChartData(
-                      gridData: FlGridData(show: false),
-                      titlesData: FlTitlesData(
-                        topTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: false)),
-                        leftTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            reservedSize: 40,
-                            getTitlesWidget: (value, meta) {
-                              String text = '';
-                              if (value == 1) text = '😄';
-                              if (value == 0) text = '😐';
-                              if (value == -1) text = '😢';
-                              return Text(text, style: const TextStyle(fontSize: 20));
-                            },
-                          ),
+                  
+                      minY: -2.0,
+                      maxY: 2.0,
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: _spots,
+                          isCurved: true,
+                          barWidth: 3,
+                          dotData: const FlDotData(show: true),
                         ),
+                      ],
+                      titlesData: FlTitlesData(
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
-                            reservedSize: 30,
+                            interval: 1,
                             getTitlesWidget: (value, meta) {
-                              final date =
-                                  DateTime.fromMillisecondsSinceEpoch(value.toInt());
+                              if (value < 0 ||
+                                  value >= _sortedDays.length) {
+                                return const SizedBox.shrink();
+                              }
+                              final date = _sortedDays[value.toInt()];
                               return Padding(
                                 padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(DateFormat.Md().format(date)),
+                                child: Text(
+                                  DateFormat.E().format(date),
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                        leftTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            interval: 0.5,
+                            getTitlesWidget: (value, meta) {
+                              return Text(
+                                _emojiForValue(value),
+                                style: const TextStyle(fontSize: 20),
                               );
                             },
                           ),
                         ),
                       ),
-                      borderData: FlBorderData(show: false),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: spots,
-                          isCurved: true,
-                          barWidth: 4,
-                          color: theme.colorScheme.primary,
-                          dotData: FlDotData(show: false),
-                          belowBarData: BarAreaData(
-                            show: true,
-                            gradient: LinearGradient(
-                              colors: [
-                                theme.colorScheme.primary.withOpacity(0.4),
-                                theme.colorScheme.primary.withOpacity(0.0),
-                              ],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                            ),
-                          ),
-                        ),
-                      ],
-                      minY: -1.1,
-                      maxY: 1.1,
+                      gridData: const FlGridData(show: true),
+                      borderData: FlBorderData(show: true),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
     );
   }
 }
+

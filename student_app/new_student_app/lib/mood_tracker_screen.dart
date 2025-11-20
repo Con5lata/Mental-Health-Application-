@@ -2,8 +2,16 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'login_page.dart';
 import 'home_screen.dart';
+
+// Ensure LoginScreen is imported from the correct file
+// If LoginScreen is not defined in 'login_page.dart', update the import below to the correct file
+// Example: import 'path_to_login_screen.dart';
+
+// Ensure LoginScreen is imported from the correct file
+// If LoginScreen is defined in 'login_page.dart', make sure it is exported there
+// If not, import the correct file where LoginScreen is defined
 
 class MoodTrackerScreen extends StatefulWidget {
   const MoodTrackerScreen({super.key});
@@ -81,7 +89,7 @@ class _MoodTrackerScreenState extends State<MoodTrackerScreen> {
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => const LoginScreen()),
+      MaterialPageRoute(builder: (context) => const LoginPage()),
       (route) => false,
     );
   }

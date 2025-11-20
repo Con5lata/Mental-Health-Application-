@@ -2,10 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:new_student_app/login_screen.dart';
-import 'package:new_student_app/register_screen.dart';
-import 'package:new_student_app/mood_tracker_screen.dart';
-import 'package:new_student_app/home_screen.dart';
+import 'login_page.dart';
+import 'register_page.dart';
+import 'mood_tracker_screen.dart';
+import 'home_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // import 'env.dart';
@@ -98,7 +98,7 @@ class MyApp extends StatelessWidget {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(16))),
         ),
       ),
-      home: const LoginScreen(),
+      home: const AuthWrapper(),
     );
 // Example function to request an appointment
   }
@@ -144,7 +144,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
         if (!hasOpened) {
           // First time ever opening the app
-          return const RegisterScreen();
+          return const RegisterPage();
         } else {
           // Not the first time, check auth state
           return StreamBuilder<User?>(
@@ -155,7 +155,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 return const HomeScreen();
               }
               // User has opened the app before but is not logged in
-              return const LoginScreen();
+              return const LoginPage();
             },
           );
         }

@@ -6,8 +6,9 @@ import 'resources_screen.dart';
 import 'support_screen.dart';
 import 'settings_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'notification_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,165 +30,74 @@ class _HomeScreenState extends State<HomeScreen> {
 
   /// ✅ Fetch user details & next appointment
   Future<void> _fetchUserData() async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    if (mounted) setState(() => _userName = 'User');
-    return;
-  }
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-  try {
-    // 🔍 Query user doc where 'user_id' matches the current Firebase Auth UID
-    final query = await FirebaseFirestore.instance
-        .collection('users')
-        .where('user_id', isEqualTo: user.uid)
-        .limit(1)
-        .get();
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
 
-    String nameToSet;
-    if (query.docs.isNotEmpty) {
-      final data = query.docs.first.data();
-      nameToSet = data['name']?.toString().trim() ?? '';
-    } else {
-      nameToSet = '';
-    }
-
-    // Use the name from the database, or fall back to Auth display name, then email.
-    if (nameToSet.isEmpty) {
-      nameToSet = user.displayName?.split(' ').first ?? user.email?.split('@').first ?? 'User';
-    }
-    if (mounted) setState(() => _userName = nameToSet);
-
-    // 🔹 Fetch next upcoming appointment
-    final appointmentsQuery = await FirebaseFirestore.instance
+    final appointmentQuery = await FirebaseFirestore.instance
         .collection('appointments')
         .where('userId', isEqualTo: user.uid)
-        .where('date', isGreaterThanOrEqualTo: DateTime.now())
-        .orderBy('date', descending: false)
+        .orderBy('date')
         .limit(1)
         .get();
 
-    if (appointmentsQuery.docs.isNotEmpty) {
-      if (mounted) {
-        setState(() => _nextAppointment = appointmentsQuery.docs.first.data());
+    setState(() {
+      _userName = userDoc.data()?['name'];
+      if (appointmentQuery.docs.isNotEmpty) {
+        final appointment = appointmentQuery.docs.first;
+        _nextAppointment = appointment.data();
+
+        final appointmentDate = _parseAppointmentDate(_nextAppointment?['date']);
+        if (appointmentDate != null) {
+          // Schedule a notification 1 hour before the appointment
+          final reminderTime = appointmentDate.subtract(const Duration(hours: 1));
+          if (reminderTime.isAfter(DateTime.now())) {
+            NotificationService().scheduleNotification(
+              id: appointment.id.hashCode, // Unique ID for the notification
+              title: 'Appointment Reminder',
+              body: "You have an appointment with ${_nextAppointment!['with']} in one hour.",
+              scheduledTime: reminderTime,
+            );
+          }
+        }
+        _nextAppointment = appointmentQuery.docs.first.data();
       }
-    } else {
-      if (mounted) setState(() => _nextAppointment = null);
-    }
-  } catch (e, st) {
-    print('Error fetching user data: $e\n$st');
-    if (mounted) {
-      setState(() {
-        _userName = user.email?.split('@').first ?? 'User';
-      });
-    }
-  }
-}
-
-
-  /// ✅ Handle bottom navigation
-  void _onItemTapped(int index) {
-    setState(() => _selectedIndex = index);
-    switch (index) {
-      case 0:
-        break;
-      case 1:
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const JournalsScreen()));
-        break;
-      case 2:
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const AppointmentsScreen()));
-        break;
-      case 3:
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const ResourcesScreen()));
-        break;
-      case 4:
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (_) => const SupportScreen()));
-        break;
-    }
+    });
   }
 
-  /// ✅ Helper to build cards for navigation
-  Widget _buildNavCard(BuildContext context, IconData icon, String label,
-      VoidCallback onTap, Color color) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Card(
-        elevation: 3,
-        color: color.withOpacity(0.08),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 36, color: color),
-              const SizedBox(height: 10),
-              Text(label,
-                  style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.w600, color: Colors.black87)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// ✅ Parse Firestore Timestamp/Date
-  DateTime? _parseAppointmentDate(dynamic raw) {
-    if (raw == null) return null;
-    if (raw is Timestamp) return raw.toDate();
-    if (raw is DateTime) return raw;
-    if (raw is String) {
-      try {
-        return DateTime.parse(raw);
-      } catch (_) {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  /// ✅ Build UI
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final initials = (_userName != null && _userName!.isNotEmpty)
-        ? _userName!.split(' ').map((e) => e[0]).take(2).join().toUpperCase()
-        : 'U';
+    final user = FirebaseAuth.instance.currentUser;
 
-    final appointmentDate = _parseAppointmentDate(_nextAppointment?['date']);
+    final appointmentDate =
+        _parseAppointmentDate(_nextAppointment?['date']);
     final formattedDate = appointmentDate != null
         ? "${_formatDate(appointmentDate)} at ${_formatTime(appointmentDate)}"
         : null;
 
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        toolbarHeight: 80,
+        backgroundColor: theme.scaffoldBackgroundColor,
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
             CircleAvatar(
-              radius: 26,
-              backgroundColor: theme.primaryColor,
-              child: Text(initials,
-                  style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18)),
+              radius: 18,
+              backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+              child: const Icon(Icons.person, color: Colors.black54),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
-                "Hi, ${_userName ?? 'User'}",
-                style: GoogleFonts.poppins(
+                _userName ?? user?.displayName ?? 'Welcome!',
+                style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 20,
+                    fontSize: 22,
                     color: Colors.black87),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -196,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black87),
+            icon: Icon(Icons.settings, color: theme.colorScheme.primary),
             onPressed: () {
               Navigator.push(
                   context,
@@ -204,21 +114,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       builder: (_) => const SettingsScreen()));
             },
           ),
-          const SizedBox(width: 8),
         ],
       ),
 
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+          padding: const EdgeInsets.fromLTRB(12, 16, 12, 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ✅ Next Appointment Card
+              /// NEXT APPOINTMENT CARD
               GestureDetector(
                 onTap: () {
-                  Navigator.push(context,
-                      MaterialPageRoute(builder: (_) => const AppointmentsScreen()));
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AppointmentsScreen()));
                 },
                 child: Container(
                   margin: const EdgeInsets.only(bottom: 20),
@@ -241,21 +152,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text("Next Appointment",
-                                style: GoogleFonts.poppins(
+                                style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold)),
                             const SizedBox(height: 6),
                             Text(
                               formattedDate ?? "No upcoming appointments",
-                              style: GoogleFonts.poppins(
-                                  color: Colors.grey[700], fontSize: 14),
+                              style: TextStyle(
+                                  color: theme.textTheme.bodyMedium?.color, fontSize: 14),
                             ),
                             if (_nextAppointment?['with'] != null) ...[
                               const SizedBox(height: 6),
                               Text(
                                 "With: ${_nextAppointment!['with']}",
-                                style: GoogleFonts.poppins(
-                                    color: Colors.grey[700], fontSize: 13),
+                                style: TextStyle(color: theme.textTheme.bodyMedium?.color, fontSize: 13),
                               ),
                             ],
                           ],
@@ -268,13 +178,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // ✅ Topics Section
               const SizedBox(height: 10),
               Text("Links",
-                  style: GoogleFonts.poppins(
+                  style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
 
+              /// GRID LINKS
               GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
@@ -284,23 +194,41 @@ class _HomeScreenState extends State<HomeScreen> {
                 childAspectRatio: 1.05,
                 children: [
                   _buildNavCard(context, Icons.book_outlined, 'Journals', () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const JournalsScreen()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const JournalsScreen()));
                   }, Colors.blue),
-                  _buildNavCard(context, Icons.calendar_today_outlined, 'Appointments', () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const AppointmentsScreen()));
-                  }, Colors.green),
-                  _buildNavCard(context, Icons.lightbulb_outline, 'Resources', () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const ResourcesScreen()));
-                  }, Colors.orange),
-                  _buildNavCard(context, Icons.support_agent_outlined, 'Support', () {
-                    Navigator.push(context,
-                        MaterialPageRoute(builder: (_) => const SupportScreen()));
-                  }, Colors.purple),
+                  _buildNavCard(
+                      context, Icons.calendar_today_outlined, 'Appointments',
+                          () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                const AppointmentsScreen()));
+                      }, Colors.green),
+                  _buildNavCard(context, Icons.lightbulb_outline, 'Resources',
+                          () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const ResourcesScreen()));
+                      }, Colors.orange),
+                  _buildNavCard(context, Icons.support_agent_outlined, 'Support',
+                          () {
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const SupportScreen()));
+                      }, Colors.purple),
                 ],
               ),
+
+              const SizedBox(height: 24),
+              ProgressTracker(),
+              const SizedBox(height: 10),
+              ContactSupportBanner(),
             ],
           ),
         ),
@@ -311,7 +239,42 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// ✅ Date Formatting Helpers
+  /// NAVIGATION HANDLER
+  void _onItemTapped(int index) {
+    setState(() => _selectedIndex = index);
+
+    switch (index) {
+      case 0:
+        break;
+      case 1:
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const JournalsScreen()));
+        break;
+      case 2:
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const AppointmentsScreen()));
+        break;
+      case 3:
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const ResourcesScreen()));
+        break;
+      case 4:
+        Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const SupportScreen()));
+        break;
+    }
+  }
+
+  /// DATE HELPERS
+  DateTime? _parseAppointmentDate(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    return null;
+  }
+
   String _formatDate(DateTime d) {
     return "${_monthShort(d.month)} ${d.day}, ${d.year}";
   }
@@ -329,5 +292,124 @@ class _HomeScreenState extends State<HomeScreen> {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return months[m - 1];
+  }
+
+  Widget _buildNavCard(
+      BuildContext context,
+      IconData icon,
+      String label,
+      VoidCallback onTap,
+      Color color,
+      ) { 
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 10),
+            Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// -------------------------------
+/// EXTRA WIDGETS
+/// -------------------------------
+
+class ProgressTracker extends StatelessWidget {
+  const ProgressTracker({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final int completed = 3;
+    final int total = 7;
+    final double percent = completed / total;
+    final theme = Theme.of(context);
+    
+    return Card(
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.08),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Weekly Progress',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurface)),
+                Text('$completed/$total days',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: theme.colorScheme.primary)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: LinearProgressIndicator(
+                value: percent,
+                minHeight: 10,
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.15),
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ContactSupportBanner extends StatelessWidget {
+  const ContactSupportBanner({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.secondary.withOpacity(0.5)),
+      ),
+      color: theme.colorScheme.secondary.withOpacity(0.08),
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Icon(Icons.support_agent_rounded,
+                color: theme.colorScheme.secondary, size: 28),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Need help? Call the mental health hotline: +254 724 255 169',
+              style: const TextStyle(
+                  color: Color(0xFF1E293B),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
