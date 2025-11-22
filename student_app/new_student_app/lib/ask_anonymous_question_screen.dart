@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'chatbot_service.dart';
+
 
 class AskAnonymousQuestionScreen extends StatefulWidget {
   const AskAnonymousQuestionScreen({super.key});
@@ -13,38 +13,32 @@ class AskAnonymousQuestionScreen extends StatefulWidget {
 class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen> {
   final TextEditingController _questionController = TextEditingController();
   bool _isSubmitting = false;
-  String _aiResponse = '';
   bool _hasTyped = false;
 
   Future<void> _submitQuestion() async {
     final questionText = _questionController.text.trim();
     if (questionText.isEmpty) return;
-  
+
     setState(() {
       _isSubmitting = true;
-      _aiResponse = '';
     });
-  
+
     try {
-      // 🔹 Get AI response from backend
-      final aiResponse = await ChatbotService.getResponse(questionText);
-  
       // 🔹 Save to Firestore
       await FirebaseFirestore.instance.collection('qna').add({
         'question': questionText,
         'author_id': 'anonymous',
         'created_at': Timestamp.now(),
-        'status': 'answered',
-        'response': aiResponse,
+        'status': 'open', // Question is open for a counsellor to answer.
+        'response': '', // Response is initially empty.
       });
-  
+
       // 🔹 Update UI
       if (mounted) {
-        setState(() {
-          _aiResponse = aiResponse;
-          _questionController.clear();
-          _hasTyped = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Your question has been submitted anonymously!')),
+        );
+        Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
@@ -168,37 +162,6 @@ class _AskAnonymousQuestionScreenState extends State<AskAnonymousQuestionScreen>
                         ),
                 ),
               ),
-              const SizedBox(height: 24),
-              if (_aiResponse.isNotEmpty)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: theme.colorScheme.primary.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Our AI Assistant Says:',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          color: theme.colorScheme.primary,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _aiResponse,
-                        style: GoogleFonts.poppins(fontSize: 14, height: 1.6),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
         ),

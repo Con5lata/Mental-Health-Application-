@@ -1,4 +1,4 @@
-name: new_student_app
+name: m_health
 description: "A new Flutter project."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -31,21 +31,26 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.2.0
-  flutter_dotenv: ^5.1.0
-  cloud_functions: ^5.0.1
+  flutter_dotenv: ^6.0.0
+  cloud_functions: ^6.0.4
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  firebase_core: ^3.1.1
-  firebase_auth: ^5.1.1
-  cloud_firestore: ^5.0.2
-  pinput: ^5.0.0
+  firebase_core: ^4.2.1
+  firebase_auth: ^6.1.2
+  cloud_firestore: ^6.1.0
+  pinput: ^6.0.0
   crypto: ^3.0.3
+  firebase_messaging: ^16.0.4
   shared_preferences: ^2.2.3
   intl: ^0.20.2
   google_fonts: ^6.3.2
   fl_chart: ^1.1.1
+  qr_flutter: ^4.1.0
+  google_sign_in: ^7.2.0
+  google_sign_in_all_platforms: ^2.0.2 
+  supabase_flutter: ^2.10.3
 
 dev_dependencies:
   flutter_test:

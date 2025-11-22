@@ -5,7 +5,7 @@ import 'home_screen.dart';
 import 'journals_screen.dart';
 import 'appointments_screen.dart';
 import 'resources_screen.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SupportScreen extends StatelessWidget {
@@ -23,7 +23,7 @@ class SupportScreen extends StatelessWidget {
           alignment: Alignment.centerLeft,
           child: Text(
             'Support & Q&A',
-            style: GoogleFonts.poppins(
+            style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 22,
               color: Colors.black,
@@ -33,7 +33,7 @@ class SupportScreen extends StatelessWidget {
         centerTitle: false,
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -48,9 +48,9 @@ class SupportScreen extends StatelessWidget {
               child: Text(
                 "Need guidance or have something on your mind? "
                 "Ask your questions anonymously, and our counsellors will respond here.",
-                style: GoogleFonts.poppins(
+                style: const TextStyle(
                   fontSize: 14,
-                  color: Colors.blueGrey.shade700,
+                  color: Colors.blueGrey,
                   height: 1.5,
                 ),
               ),
@@ -71,7 +71,7 @@ class SupportScreen extends StatelessWidget {
                     return Center(
                       child: Text(
                         'Error loading Q&A. Please try again.',
-                        style: GoogleFonts.poppins(color: Colors.red),
+                        style: TextStyle(color: Colors.red),
                       ),
                     );
                   }
@@ -88,18 +88,18 @@ class SupportScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           Text(
                             "No questions yet",
-                            style: GoogleFonts.poppins(
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: Colors.grey.shade600,
+                              color: Colors.grey,
                             ),
                           ),
                           const SizedBox(height: 6),
                           Text(
                             "Be the first to ask an anonymous question!",
-                            style: GoogleFonts.poppins(
+                            style: const TextStyle(
                               fontSize: 14,
-                              color: Colors.grey.shade500,
+                              color: Colors.grey,
                             ),
                           ),
                         ],
@@ -130,9 +130,9 @@ class SupportScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.blue.shade700,
         icon: const Icon(Icons.add_comment, color: Colors.white),
-        label: Text(
+        label: const Text(
           'Ask Question',
-          style: GoogleFonts.poppins(
+          style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
@@ -144,7 +144,6 @@ class SupportScreen extends StatelessWidget {
           );
         },
       ),
-      // ✅ Bottom Navigation Bar
       bottomNavigationBar: BottomNavBar(
         currentIndex: 4,
         onTap: (index) {
@@ -215,125 +214,132 @@ class _QAExpandableCardState extends State<QAExpandableCard> {
     }
     final isOpen = widget.status == 'open';
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Card(
-        color: Colors.white,
-        elevation: 2,
-        shadowColor: Colors.grey.shade200,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 🔹 Question Text
-              Text(
-                widget.question,
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 8),
-              // 🔸 Meta info
-              Row(
+    return Center(
+      child: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.97,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          margin: const EdgeInsets.symmetric(vertical: 4.0),
+          child: Card(
+            color: Colors.white,
+            elevation: 2,
+            shadowColor: Colors.grey.shade200,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 6.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    isOpen ? Icons.mark_chat_unread : Icons.mark_chat_read,
-                    size: 16,
-                    color: isOpen ? Colors.green : Colors.grey.shade600,
-                  ),
-                  const SizedBox(width: 6),
+                  // 🔹 Question Text
                   Text(
-                    isOpen ? "Open" : "Answered",
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: isOpen ? Colors.green : Colors.grey.shade700,
+                    widget.question,
+                    style: const TextStyle(
                       fontWeight: FontWeight.w600,
+                      fontSize: 15, // Slightly smaller
+                      color: Colors.black,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    "By: Anonymous",
-                    style: GoogleFonts.poppins(
-                      fontSize: 13,
-                      color: Colors.grey.shade600,
-                    ),
+                  const SizedBox(height: 8),
+                  // 🔸 Meta info
+                  Row(
+                    children: [
+                      Icon(
+                        isOpen ? Icons.mark_chat_unread : Icons.mark_chat_read,
+                        size: 16,
+                        color: isOpen ? Colors.green : Colors.grey.shade600,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        isOpen ? "Open" : "Answered",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isOpen ? Colors.green : Colors.grey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "By: Anonymous",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (dateStr.isNotEmpty)
+                        Text(
+                          dateStr,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  if (dateStr.isNotEmpty)
-                    Text(
-                      dateStr,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.grey.shade600,
+                  const SizedBox(height: 8),
+                  // 💬 Response Bubble
+                  AnimatedCrossFade(
+                    firstChild: Text(
+                      widget.response,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.blueGrey,
                       ),
                     ),
+                    secondChild: Text(
+                      widget.response,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.blueGrey,
+                      ),
+                    ),
+                    crossFadeState: isExpanded
+                        ? CrossFadeState.showSecond
+                        : CrossFadeState.showFirst,
+                    duration: const Duration(milliseconds: 300),
+                  ),
+                  const SizedBox(height: 8),
+                  // Action buttons
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            isExpanded = !isExpanded;
+                          });
+                        },
+                        child: Text(
+                          isExpanded ? 'Show less' : 'View full answer',
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: () {},
+                        child: Text(
+                          'Report',
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // 💬 Response Bubble
-              AnimatedCrossFade(
-                firstChild: Text(
-                  widget.response,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    color: Colors.blueGrey.shade800,
-                  ),
-                ),
-                secondChild: Text(
-                  widget.response,
-                  style: GoogleFonts.poppins(
-                    fontSize: 15,
-                    color: Colors.blueGrey.shade800,
-                  ),
-                ),
-                crossFadeState: isExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
-                duration: const Duration(milliseconds: 300),
-              ),
-              const SizedBox(height: 8),
-              // Action buttons
-              Row(
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      setState(() {
-                        isExpanded = !isExpanded;
-                      });
-                    },
-                    child: Text(
-                      isExpanded ? 'Show less' : 'View full answer',
-                      style: GoogleFonts.poppins(
-                        color: Colors.blue.shade700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () {},
-                    child: Text(
-                      'Report',
-                      style: GoogleFonts.poppins(
-                        color: Colors.red.shade400,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+

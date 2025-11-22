@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -147,7 +147,7 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
         centerTitle: true,
         title: Text(
           'Journal Entry',
-          style: GoogleFonts.poppins(
+          style: TextStyle(
             color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
@@ -204,7 +204,7 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
                   ),
                 ],
               ),
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -215,10 +215,10 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
                       Chip(
                         label: Text(
                           formattedDate,
-                          style: GoogleFonts.poppins(
+                          style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.w500,
-                            fontSize: 13,
+                            fontSize: 13, 
                           ),
                         ),
                         backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
@@ -227,70 +227,82 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
                       _buildSentimentChip(),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
 
                   // 🖋️ Editable Title
                   isEditing
                       ? TextField(
                           controller: titleController,
-                          style: GoogleFonts.poppins(
-                            fontSize: 22,
+                          style: const TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.w600,
                           ),
                           decoration: const InputDecoration(
                             hintText: 'Enter title...',
                             border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 6),
                           ),
                         )
-                      : Text(
-                          titleController.text.isNotEmpty
-                              ? titleController.text
-                              : 'Untitled entry',
-                          style: GoogleFonts.poppins(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface,
-                            height: 1.3,
+                      : Padding(
+                          padding: const EdgeInsets.only(bottom: 2.0),
+                          child: Text(
+                            titleController.text.isNotEmpty
+                                ? titleController.text
+                                : 'Untitled entry',
+                            style: TextStyle(
+                              fontSize: 20, 
+                              fontWeight: FontWeight.w600,
+                              color: theme.colorScheme.onSurface, 
+                              height: 1.25,
+                            ),
                           ),
                         ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 8),
 
                   // ✍🏽 Editable Journal Body
                   isEditing
                       ? TextField(
                           controller: entryController,
-                          style: GoogleFonts.poppins(fontSize: 16),
+                          style: TextStyle(fontSize: 15),
                           maxLines: null,
                           decoration: const InputDecoration(
                             border: InputBorder.none,
                             hintText: 'Write your thoughts...',
+                            contentPadding: EdgeInsets.symmetric(vertical: 8),
                           ),
                         )
-                      : Text(
-                          entryController.text,
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            color: theme.colorScheme.onSurface.withOpacity(0.9),
-                            height: 1.6,
-                            letterSpacing: 0.2,
+                      : Padding(
+                          padding: const EdgeInsets.only(bottom: 2.0),
+                          child: Text(
+                            entryController.text,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              color: Color(0xFF1E293B),
+                              height: 1.5,
+                              letterSpacing: 0.1,
+                            ),
+                            textAlign: TextAlign.left,
                           ),
-                          textAlign: TextAlign.justify,
                         ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 18),
 
                   // 🌸 Gentle Divider + Emotion Tag Area
-                  Divider(color: Colors.grey.shade300, thickness: 1),
-                  const SizedBox(height: 10),
+                  Divider(color: Colors.grey.shade200, thickness: 1),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Icon(Icons.favorite_border,
-                          color: theme.colorScheme.secondary, size: 20),
+                          color: theme.colorScheme.secondary, size: 18),
                       const SizedBox(width: 6),
-                      Text(
-                        'Take a deep breath — you’re doing great.',
-                        style: GoogleFonts.poppins(
-                          color: theme.colorScheme.secondary.withOpacity(0.8),
-                          fontSize: 13,
+                      Flexible(
+                        child: Text(
+                          'Take a deep breath — you’re doing great.',
+                          style: const TextStyle(
+                            color: Color(0xFF38B2AC),
+                            fontSize: 12.5,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
                         ),
                       ),
                     ],
@@ -308,7 +320,7 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
         icon: Icon(isEditing ? Icons.check : Icons.edit),
         label: Text(
           isEditing ? 'Save' : 'Edit',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+          style: TextStyle(fontWeight: FontWeight.w500),
         ),
         onPressed: () {
           if (isEditing) {
