@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'bottom_nav_bar.dart';
 import 'home_screen.dart';
 import 'journals_screen.dart';
 import 'appointments_screen.dart';
 import 'support_screen.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'resources_detail_screen.dart';
+import 'quiz_screen.dart'; // Import the quiz screen
 
 class ResourcesScreen extends StatefulWidget {
   const ResourcesScreen({super.key});
@@ -14,110 +16,136 @@ class ResourcesScreen extends StatefulWidget {
   State<ResourcesScreen> createState() => _ResourcesScreenState();
 }
 
-class _ResourcesScreenState extends State<ResourcesScreen>
-    with SingleTickerProviderStateMixin {
+class _ResourcesScreenState extends State<ResourcesScreen> {
   String searchQuery = '';
   String selectedCategory = 'All';
-  late AnimationController _controller;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller =
-        AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  String? _recommendedCategory; // Stores the result from the AI Quiz
 
   final Map<String, Color> categoryColors = {
     'All': Colors.blue.shade700,
     'Stress': Colors.red.shade400,
+    'Anxiety': Colors.teal.shade400,
     'Exams': Colors.orange.shade400,
     'Burnout': Colors.purple.shade400,
+    'Wellness': Colors.green.shade400,
   };
+
+  void _takeQuiz() async {
+    // Navigate to quiz and wait for result
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const QuizScreen()),
+    );
+
+    if (result != null && result is String) {
+      setState(() {
+        _recommendedCategory = result;
+        selectedCategory = result; // Automatically filter by recommendation
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Based on your answers, we've highlighted $result resources."),
+          backgroundColor: Colors.indigo,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FAF9),
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: const Color(0xFFF7FAF9),
-        title: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            'Resources',
-            style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold, fontSize: 22, color: Colors.black),
+        scrolledUnderElevation: 0,
+        backgroundColor: const Color(0xFFF8F9FA),
+        title: Text(
+          'Resources',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600, 
+            fontSize: 24, 
+            color: const Color(0xFF1A1C1E)
           ),
         ),
         centerTitle: false,
+        actions: [
+          if (_recommendedCategory != null)
+            TextButton.icon(
+              onPressed: () => setState(() {
+                _recommendedCategory = null;
+                selectedCategory = 'All';
+              }),
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text("Reset AI"),
+            )
+        ],
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔍 Search bar
+            // 1. Intro & Quiz Section
+            if (_recommendedCategory == null)
+              _buildIntroCard()
+            else
+              _buildRecommendationBanner(),
+
+            const SizedBox(height: 20),
+
+            // 2. Search Bar
             TextField(
-              onChanged: (value) {
-                setState(() {
-                  searchQuery = value.toLowerCase();
-                });
-              },
+              onChanged: (value) => setState(() => searchQuery = value.toLowerCase()),
               decoration: InputDecoration(
-                hintText: 'Search resources...',
+                hintText: 'Search articles, videos...',
                 hintStyle: GoogleFonts.poppins(color: Colors.grey.shade500),
-                prefixIcon: Icon(Icons.search, color: Colors.blue.shade700),
+                prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
               ),
-              style: GoogleFonts.poppins(color: Colors.black87),
             ),
-            const SizedBox(height: 16),
-            // 🏷️ Category chips
+            
+            const SizedBox(height: 20),
+
+            // 3. Category Filter Chips
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: ['All', 'Stress', 'Exams', 'Burnout'].map((cat) {
+                children: ['All', 'Stress', 'Anxiety', 'Exams', 'Burnout', 'Wellness'].map((cat) {
+                  final isSelected = selectedCategory == cat;
                   return Padding(
-                    padding: const EdgeInsets.only(right: 8.0),
+                    padding: const EdgeInsets.only(right: 10.0),
                     child: ChoiceChip(
-                      label: Text(cat,
-                          style: GoogleFonts.poppins(
-                              color: selectedCategory == cat
-                                  ? Colors.white
-                                  : categoryColors[cat] ?? Colors.blue.shade700,
-                              fontWeight: FontWeight.w500)),
-                      selected: selectedCategory == cat,
-                      selectedColor: categoryColors[cat] ?? Colors.blue.shade700,
-                      backgroundColor: (categoryColors[cat] ?? Colors.blue.shade700)
-                          .withOpacity(0.1),
-                      onSelected: (_) {
-                        setState(() {
-                          selectedCategory = cat;
-                        });
-                      },
+                      label: Text(cat),
+                      labelStyle: GoogleFonts.poppins(
+                        color: isSelected ? Colors.white : Colors.grey.shade700,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      selected: isSelected,
+                      selectedColor: categoryColors[cat] ?? Colors.blue,
+                      backgroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        side: BorderSide(
+                          color: isSelected ? Colors.transparent : Colors.grey.shade200
+                        )
+                      ),
+                      onSelected: (_) => setState(() => selectedCategory = cat),
                     ),
                   );
                 }).toList(),
               ),
             ),
-            const SizedBox(height: 16),
-            // 📄 Firestore resource list
+
+            const SizedBox(height: 20),
+
+            // 4. Resource List
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -128,28 +156,19 @@ class _ResourcesScreenState extends State<ResourcesScreen>
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  if (snapshot.hasError) {
-                    return Center(
-                        child: Text(
-                      'Error loading resources',
-                      style: GoogleFonts.poppins(color: Colors.red),
-                    ));
-                  }
-
+                  
                   final docs = snapshot.data?.docs ?? [];
-
-                  // Apply search and category filters
+                  
                   final filteredDocs = docs.where((doc) {
                     final data = doc.data() as Map<String, dynamic>;
                     final title = data['title']?.toString().toLowerCase() ?? '';
-                    final body = data['body']?.toString().toLowerCase() ?? '';
-                    final category =
-                        data['category']?.toString().toLowerCase() ?? '';
-                    final matchesSearch =
-                        title.contains(searchQuery) || body.contains(searchQuery);
-                    final matchesCategory = selectedCategory.toLowerCase() == 'all'
-                        ? true
-                        : category == selectedCategory.toLowerCase();
+                    final category = data['category']?.toString().toLowerCase() ?? '';
+                    
+                    // Filter logic
+                    final matchesSearch = title.contains(searchQuery);
+                    final matchesCategory = selectedCategory == 'All' || 
+                        category == selectedCategory.toLowerCase();
+                    
                     return matchesSearch && matchesCategory;
                   }).toList();
 
@@ -158,33 +177,25 @@ class _ResourcesScreenState extends State<ResourcesScreen>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.folder_open,
-                              size: 80, color: Colors.grey.shade400),
-                          const SizedBox(height: 16),
-                          Text('No resources found',
-                              style: GoogleFonts.poppins(
-                                  fontSize: 18, color: Colors.grey.shade600)),
+                          Icon(Icons.content_paste_search, size: 60, color: Colors.grey.shade300),
+                          const SizedBox(height: 10),
+                          Text("No resources found", style: GoogleFonts.poppins(color: Colors.grey)),
                         ],
                       ),
                     );
                   }
 
-                  return FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: ListView.builder(
-                      itemCount: filteredDocs.length,
-                      itemBuilder: (context, index) {
-                        final data =
-                            filteredDocs[index].data() as Map<String, dynamic>;
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          child: ResourceCard(
-                            title: data['title'] ?? '',
-                            body: data['body'] ?? '',
-                          ),
-                        );
-                      },
-                    ),
+                  return ListView.builder(
+                    itemCount: filteredDocs.length,
+                    itemBuilder: (context, index) {
+                      final data = filteredDocs[index].data() as Map<String, dynamic>;
+                      return ResourceCard(
+                        title: data['title'] ?? 'Untitled',
+                        body: data['body'] ?? '',
+                        category: data['category'] ?? 'General',
+                        color: categoryColors[data['category']] ?? Colors.blue,
+                      );
+                    },
                   );
                 },
               ),
@@ -196,151 +207,211 @@ class _ResourcesScreenState extends State<ResourcesScreen>
         currentIndex: 3,
         onTap: (index) {
           switch (index) {
-            case 0:
-              Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (context) => const HomeScreen()));
-              break;
-            case 1:
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const JournalsScreen()));
-              break;
-            case 2:
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const AppointmentsScreen()));
-              break;
-            case 3:
-              // Already on ResourcesScreen
-              break;
-            case 4:
-              Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const SupportScreen()));
-              break;
+            case 0: Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const HomeScreen())); break;
+            case 1: Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const JournalsScreen())); break;
+            case 2: Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const AppointmentsScreen())); break;
+            case 3: break;
+            case 4: Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const SupportScreen())); break;
           }
         },
       ),
     );
   }
-}
 
-// 📝 Resource Card - opens semi-full page modal on "Read more"
-// 📝 Resource Card - opens semi-full page modal on "Read more"
-class ResourceCard extends StatelessWidget {
-  final String title;
-  final String body;
-
-  const ResourceCard({super.key, required this.title, required this.body});
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 3,
-      color: Colors.white,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title,
+  Widget _buildIntroCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.indigo.shade500, Colors.blue.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.shade200.withOpacity(0.5),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: Colors.yellowAccent),
+              const SizedBox(width: 10),
+              Text(
+                "Personalized Care",
                 style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                    color: Colors.black)),
-            const SizedBox(height: 8),
-            Stack(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            "At MindCare, we are committed to providing the best resources for your needs.",
+            style: GoogleFonts.poppins(color: Colors.white.withOpacity(0.9), fontSize: 13),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _takeQuiz,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.indigo,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text("Take the Quiz", style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationBanner() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: Colors.green),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Removed shade here
-                Text(body,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
-                        fontSize: 14, color: Colors.black)),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: Container(
-                    height: 20,
-                    decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.white])),
-                  ),
-                )
+                Text(
+                  "Results Analyzed",
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                ),
+                Text(
+                  "Showing resources for: $_recommendedCategory",
+                  style: GoogleFonts.poppins(fontSize: 13, color: Colors.green.shade700),
+                ),
               ],
             ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ResourceDetailScreen(title: title, body: body),
-                      ),
-                    );
-                  },
-                  child: Text('Read more',
-                      style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.blue.shade700)),
-                ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-
-// 📑 Semi-full page modal for resource detail
-class ResourceDetailScreen extends StatelessWidget {
+// Refined Resource Card
+class ResourceCard extends StatelessWidget {
   final String title;
   final String body;
+  final String category;
+  final Color color;
 
-  const ResourceDetailScreen({super.key, required this.title, required this.body});
+  const ResourceCard({
+    super.key, 
+    required this.title, 
+    required this.body, 
+    required this.category,
+    this.color = Colors.blue,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(title,
-            style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.black)),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      backgroundColor: Colors.white,
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
-                      color: Colors.black)),
-              const SizedBox(height: 16),
-              Text(body,
-                  style: GoogleFonts.poppins(
-                      fontSize: 16, color: Colors.blueGrey.shade800)),
-            ],
-          ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => ResourceDetailScreen(title: title, body: body)),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Category Tag
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                ),
+              ),
+              child: Text(
+                category.toUpperCase(),
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    body,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey.shade600,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Text(
+                        "Read Article",
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.arrow_forward, size: 14, color: Colors.blue.shade700),
+                    ],
+                  )
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

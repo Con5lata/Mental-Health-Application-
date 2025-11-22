@@ -9,84 +9,61 @@ class ResourceDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        elevation: 0.5,
-        backgroundColor: theme.colorScheme.surface,
-        centerTitle: true,
+        elevation: 0,
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
-          'Resource Detail',
+          "Resource",
           style: GoogleFonts.poppins(
-            color: theme.colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
+            color: Colors.black, 
+            fontSize: 16, 
+            fontWeight: FontWeight.w600
           ),
         ),
-        iconTheme: IconThemeData(color: theme.colorScheme.primary),
+        centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12.withOpacity(0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+                height: 1.3,
               ),
-            ],
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Optional date placeholder (or remove if not needed)
-              // Chip(
-              //   label: Text('November 2, 2025', style: GoogleFonts.poppins(fontSize: 13)),
-              //   backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-              // ),
-              // const SizedBox(height: 16),
-
-              // Title
-              Text(title,
-                  style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 22,
-                      color: Colors.black)),
-              const SizedBox(height: 16),
-
-              // Body
-              Text(body,
-                  style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      color: theme.colorScheme.onSurface.withOpacity(0.9),
-                      height: 1.6),
-                  textAlign: TextAlign.justify),
-              const SizedBox(height: 30),
-
-              // Motivational footer
-              Divider(color: Colors.grey.shade300, thickness: 1),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Icon(Icons.favorite_border,
-                      color: theme.colorScheme.secondary, size: 20),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Take a deep breath — you’re doing great.',
-                    style: GoogleFonts.poppins(
-                      color: theme.colorScheme.secondary.withOpacity(0.8),
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
+            ),
+            const SizedBox(height: 24),
+            // Simulating a "tag" or meta info
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 16, color: Colors.grey.shade500),
+                const SizedBox(width: 6),
+                Text(
+                  "5 min read",
+                  style: GoogleFonts.poppins(color: Colors.grey.shade500, fontSize: 13),
+                ),
+              ],
+            ),
+            const SizedBox(height: 30),
+            Text(
+              body,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.grey.shade800,
+                height: 1.8, // Better readability
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

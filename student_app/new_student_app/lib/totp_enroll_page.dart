@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'login_page.dart';
 
 class TotpEnrollPage extends StatefulWidget {
   const TotpEnrollPage({super.key});
@@ -10,89 +11,115 @@ class TotpEnrollPage extends StatefulWidget {
 }
 
 class _TotpEnrollPageState extends State<TotpEnrollPage> {
-  String? qrUrl;
-  dynamic secret;
   final _codeController = TextEditingController();
-  bool verifying = false;
+  String? _factorId;
+  String? _qrCodeUri;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    generateTotpSecret();
+    _startEnrollment();
   }
 
-  Future<void> generateTotpSecret() async {
-    final user = FirebaseAuth.instance.currentUser!;
-    final multiFactor = user.multiFactor;
-
-    final session = await multiFactor.getSession();
-
-    final totpSecret = await TotpMultiFactorGenerator.generateSecret(session);
-
-    setState(() {
-      qrUrl = totpSecret.toString();
-      secret = totpSecret;
-    });
-  }
-
-  Future<void> verifyTotpCode() async {
+  // 1. Ask Supabase for a QR Code
+  Future<void> _startEnrollment() async {
     try {
-      setState(() => verifying = true);
-
-      final user = FirebaseAuth.instance.currentUser!;
-      final multiFactor = user.multiFactor;
-
-      final assertion = await secret.getAssertionForEnrollment(
-        _codeController.text.trim(),
+      final response = await Supabase.instance.client.auth.mfa.enroll(
+        factorType: FactorType.totp,
       );
-
-      await multiFactor.enroll(assertion, displayName: "Authenticator App");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("MFA Enabled Successfully!")),
-      );
-
-      Navigator.pop(context);
+      
+      setState(() {
+        _factorId = response.id;
+        _qrCodeUri = response.totp?.uri; // This URL generates the QR image
+        _loading = false;
+      });
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Invalid code: $e")));
-    } finally {
-      setState(() => verifying = false);
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+    }
+  }
+
+  // 2. Verify the code user typed in
+  Future<void> _verifyAndEnable() async {
+    try {
+      setState(() => _loading = true);
+      
+      await Supabase.instance.client.auth.mfa.challengeAndVerify(
+        factorId: _factorId!,
+        code: _codeController.text.trim(),
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("MFA Enabled!")));
+        // Go to Login Page so they can test the flow
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      setState(() => _loading = false);
+      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Invalid Code: $e")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Enable MFA")),
+      appBar: AppBar(title: const Text("Secure Your Account")),
       body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            if (qrUrl == null)
-              Center(child: CircularProgressIndicator())
-            else ...[
-              Text("Scan this QR code in Google Authenticator:",
-                  style: TextStyle(fontSize: 16)),
-              SizedBox(height: 20),
-              QrImageView(data: qrUrl!, size: 200),
-              SizedBox(height: 20),
-              TextField(
-                controller: _codeController,
-                decoration: InputDecoration(
-                    labelText: "Enter 6-digit code",
-                    border: OutlineInputBorder()),
+        padding: const EdgeInsets.all(24.0),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const Text(
+                      "Scan this QR Code with Google Authenticator",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Display QR Code
+                    if (_qrCodeUri != null)
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        color: Colors.white,
+                        child: QrImageView(
+                          data: _qrCodeUri!,
+                          version: QrVersions.auto,
+                          size: 200.0,
+                        ),
+                      ),
+                    
+                    const SizedBox(height: 30),
+                    const Text("Enter the 6-digit code from the app:"),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: _codeController,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      maxLength: 6,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        counterText: "",
+                        hintText: "123456",
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: _verifyAndEnable,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.indigo,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: const Text("Verify & Enable"),
+                    )
+                  ],
+                ),
               ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: verifying ? null : verifyTotpCode,
-                child: verifying
-                    ? CircularProgressIndicator()
-                    : Text("Verify & Enable MFA"),
-              )
-            ]
-          ],
-        ),
       ),
     );
   }

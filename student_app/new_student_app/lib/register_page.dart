@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import 'totp_enroll_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -20,60 +18,15 @@ class _RegisterPageState extends State<RegisterPage> {
   bool showPassword = false; // 👈 for password visibility toggle
 
   // ----------------------------
-  // GOOGLE SIGN-IN LOGIC
+  // GOOGLE SIGN-IN LOGIC (Supabase)
   // ----------------------------
   Future<void> signInWithGoogle() async {
     try {
       setState(() => loading = true);
-
-      // This can return null if the user cancels the sign-in.
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-
-      // Explicitly handle user cancellation.
-      if (googleUser == null) {
-        setState(() => loading = false);
-        return; // canceled
-      }
-
-      // This part can fail if there's a network issue or configuration problem.
-      final googleAuth = await googleUser.authentication;
-
-      // Ensure tokens are not null
-      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
-        throw FirebaseAuthException(
-            code: 'ERROR_MISSING_GOOGLE_AUTH_TOKEN', message: 'Missing Google Auth Token');
-      }
-
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-
-      // Save user data in Firestore (if new)
-      final user = userCredential.user;
-      if (user == null) return;
-
-      final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
-      final userDoc = await userDocRef.get();
-
-      if (!userDoc.exists) {
-        await userDocRef.set({
-          'name': user.displayName ?? _nameController.text.trim(),
-          'email': user.email,
-          'createdAt': FieldValue.serverTimestamp(),
-        });
-      }
-
-      // Proceed to MFA
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TotpEnrollPage()),
-        );
-      }
-    } catch (e) { // Catch other potential errors (e.g., network, configuration)
+      // This will redirect the user to the Google sign-in page and back
+            await supabase.Supabase.instance.client.auth.signInWithOAuth(supabase.OAuthProvider.google);
+      // Navigation after OAuth is typically handled by a deep link or callback
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("An error occurred during Google Sign-In: $e")));
     } finally {
@@ -84,46 +37,35 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   // ----------------------------
-  // EMAIL + PASSWORD + OTP LOGIC
+  // EMAIL + PASSWORD LOGIC (Supabase)
   // ----------------------------
   Future<void> registerWithEmail() async {
     try {
       setState(() => loading = true);
-
-      // Step 1 → Create the user account
-      final credential =
-          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+      final response = await supabase.Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
+        data: {
+          'name': _nameController.text.trim(),
+        },
       );
-
-      // Step 2 → Send email verification (your OTP)
-      await credential.user!.sendEmailVerification();
-
-      // Step 3 → Save extra user info
-      final userId = credential.user!.uid;
-
-      await FirebaseFirestore.instance.collection('users').doc(userId).set({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // Step 4 → Go to MFA screen
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const TotpEnrollPage()),
-        );
+      if (response.user != null) {
+        if (mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const TotpEnrollPage()),
+          );
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text(
+              "A verification email has been sent. Please confirm it to continue.",
+            ),
+          ));
+        }
+      } else {
+        throw Exception("Registration failed. Please try again.");
       }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-            "A verification code has been sent to your email. Please confirm it to continue.",
-          ),
-        ),
-      );
     } catch (e) {
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
@@ -156,12 +98,15 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                "Your wellbeing matters. Create an account to access tools that support your mental health journey.",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  height: 1.4,
+              Center(
+                child: Text(
+                  "Your wellbeing matters. Create an account to access tools that support your mental health journey.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                    height: 1.4,
+                  ),
                 ),
               ),
               const SizedBox(height: 40),

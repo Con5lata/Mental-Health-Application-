@@ -1,6 +1,8 @@
+import 'auth_bridge.dart'; // Import the bridge helper we made
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'forgot_password_page.dart';
+import 'register_page.dart'; // ← make sure this import is added
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,63 +14,57 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _mfaCodeController = TextEditingController();
 
-  MultiFactorSession? mfaSession;
-  FirebaseAuthMultiFactorException? mfaException;
-
-  bool requiresMfa = false;
   bool loading = false;
   bool showPassword = false;
 
   // ----------------------------
-  // EMAIL + PASSWORD LOGIN LOGIC
+  // 🆕 NEW: GUEST LOGIN LOGIC
+  // ----------------------------
+  Future<void> _continueAsGuest() async {
+    try {
+      setState(() => loading = true);
+      // Sign in anonymously with Firebase directly
+      // This bypasses Supabase/Bridge because guests don't need sync
+      await FirebaseAuth.instance.signInAnonymously();
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, "/home");
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Guest login failed: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+  // ----------------------------
+  // EMAIL + PASSWORD LOGIN LOGIC (Firebase Only)
   // ----------------------------
   Future<void> login() async {
     try {
       setState(() => loading = true);
 
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // Firebase login
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      Navigator.pushReplacementNamed(context, "/home");
-    } on FirebaseAuthMultiFactorException catch (e) {
-      mfaSession = e.resolver.session;
-      mfaException = e;
-      requiresMfa = true;
-      setState(() {});
+      if (credential.user == null) throw "Login failed";
+
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, "/home");
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error: $e")));
-    } finally {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
       setState(() => loading = false);
     }
   }
 
-  // ----------------------------
-  // MFA SUBMISSION LOGIC
-  // ----------------------------
-  Future<void> submitMfaCode() async {
-    if (mfaException == null) return;
-
-    try {
-      final resolver = mfaException!.resolver;
-
-      // For TOTP MFA, use this:
-      final assertion = TotpMultiFactorGenerator.getAssertionForSignIn(
-        _mfaCodeController.text.trim(),
-      );
-
-      await resolver.resolveSignIn(assertion);
-
-      Navigator.pushReplacementNamed(context, "/home");
-    } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("MFA Error: $e")));
-    }
-  }
+  // Supabase login, MFA, and bridge logic removed. Registration remains on Supabase.
 
   @override
   Widget build(BuildContext context) {
@@ -84,31 +80,36 @@ class _LoginPageState extends State<LoginPage> {
               // -------------------------
               // INTRO TEXT
               // -------------------------
-              Text(
-                "Welcome Back",
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo.shade900,
+              Center(
+                child: Text(
+                  "Welcome Back",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo.shade900,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                "Log in to continue your wellbeing journey.",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                  height: 1.4,
+              Center(
+                child: Text(
+                  "Log in to continue your wellbeing journey.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                    height: 1.4,
+                  ),
                 ),
               ),
 
               const SizedBox(height: 40),
 
               // -------------------------------------
-              // EMAIL + PASSWORD FIELDS (NO MFA)
+              // EMAIL + PASSWORD FIELDS
               // -------------------------------------
-              if (!requiresMfa) ...[
-                // EMAIL
+              ...[
                 TextField(
                   controller: _emailController,
                   decoration: InputDecoration(
@@ -124,7 +125,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 18),
 
-                // PASSWORD
                 TextField(
                   controller: _passwordController,
                   obscureText: !showPassword,
@@ -151,7 +151,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 14),
 
-                // FORGOT PASSWORD
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -173,7 +172,6 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 20),
 
-                // LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -190,88 +188,55 @@ class _LoginPageState extends State<LoginPage> {
                         : const Text(
                             "Login",
                             style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
+                              fontSize: 17,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
                           ),
                   ),
                 ),
 
                 const SizedBox(height: 25),
 
-                // REGISTER LINK
+                // --------------------------
+                // UPDATED REGISTER LINK
+                // --------------------------
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text("Don't have an account? "),
                     GestureDetector(
                       onTap: () {
-                        Navigator.pushNamed(context, "/register");
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const RegisterPage(),
+                          ),
+                        );
                       },
                       child: Text(
                         "Register",
                         style: TextStyle(
                           color: Colors.indigo.shade700,
                           fontWeight: FontWeight.bold,
+                          decoration: TextDecoration.underline,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ],
-
-              // -------------------------------------
-              // MFA SECTION
-              // -------------------------------------
-              if (requiresMfa) ...[
-                Text(
-                  "Multi-Factor Authentication Required",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.indigo.shade900,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "Enter the 6-digit code from your authenticator app.",
-                  style: TextStyle(fontSize: 15, color: Colors.black54),
-                ),
-                const SizedBox(height: 24),
-
-                TextField(
-                  controller: _mfaCodeController,
-                  keyboardType: TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: "6-digit code",
-                    filled: true,
-                    fillColor: Colors.white,
-                    prefixIcon: const Icon(Icons.key_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
+                const SizedBox(height: 18),
+                // GUEST LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: submitMfaCode,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                    child: const Text(
-                      "Verify Code",
-                      style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white),
+                  child: OutlinedButton.icon(
+                    onPressed: loading ? null : _continueAsGuest,
+                    icon: const Icon(Icons.person_outline),
+                    label: const Text("Continue as Guest"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.indigo,
+                      side: BorderSide(color: Colors.indigo.shade200),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
                 ),
