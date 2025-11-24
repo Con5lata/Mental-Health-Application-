@@ -339,8 +339,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     context, "Journals", Icons.book, 
                     isGuest ? [Colors.grey, Colors.blueGrey] : [const Color(0xFF6A11CB), const Color(0xFF2575FC)], 
                     () {
-                      if(isGuest) _showGuestLock(context, "Journals");
-                      else Navigator.push(context, MaterialPageRoute(builder: (_) => const JournalsScreen()));
+                      if(isGuest) {
+                        _showGuestLock(context, "Journals");
+                      } else {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const JournalsScreen()));
+                      }
                     },
                     isLocked: isGuest,
                   ),
@@ -349,8 +352,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     context, "Appointments", Icons.calendar_today, 
                     isGuest ? [Colors.grey, Colors.blueGrey] : [const Color(0xFF11998E), const Color(0xFF38EF7D)], 
                     () {
-                      if(isGuest) _showGuestLock(context, "Appointments");
-                      else Navigator.push(context, MaterialPageRoute(builder: (_) => const AppointmentsScreen()));
+                      if(isGuest) {
+                        _showGuestLock(context, "Appointments");
+                      } else {
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => const AppointmentsScreen()));
+                      }
                     },
                     isLocked: isGuest,
                   ),

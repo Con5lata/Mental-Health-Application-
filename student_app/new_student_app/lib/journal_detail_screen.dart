@@ -24,6 +24,8 @@ class JournalDetailScreen extends StatefulWidget {
 }
 
 class _JournalDetailScreenState extends State<JournalDetailScreen> {
+    String? _aiFeedback;
+    bool _loadingFeedback = false;
   late bool isEditing;
   late TextEditingController titleController;
   late TextEditingController entryController;
@@ -34,6 +36,30 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
     isEditing = false;
     titleController = TextEditingController(text: widget.title);
     entryController = TextEditingController(text: widget.entry);
+    _fetchAIFeedback();
+  }
+
+  Future<void> _fetchAIFeedback() async {
+    setState(() {
+      _loadingFeedback = true;
+    });
+    try {
+      final doc = await FirebaseFirestore.instance.collection('journals').doc(widget.id).get();
+      if (doc.exists) {
+        final data = doc.data();
+        if (data != null && data['ai_feedback'] != null && data['ai_feedback'].toString().trim().isNotEmpty) {
+          setState(() {
+            _aiFeedback = data['ai_feedback'].toString();
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching AI feedback: $e');
+    } finally {
+      setState(() {
+        _loadingFeedback = false;
+      });
+    }
   }
 
   @override
@@ -307,6 +333,33 @@ class _JournalDetailScreenState extends State<JournalDetailScreen> {
                       ),
                     ],
                   ),
+
+                  // AI Feedback Section
+                  if (_loadingFeedback)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 12.0),
+                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    )
+                  else if (_aiFeedback != null && _aiFeedback!.trim().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          _aiFeedback!,
+                          style: const TextStyle(
+                            fontSize: 13.5,
+                            color: Color(0xFF334155),
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

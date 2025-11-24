@@ -68,7 +68,7 @@ class _RegisterPageState extends State<RegisterPage> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error: ${e.toString()}")));
+          .showSnackBar(SnackBar(content: Text("Error: \\${e.toString()}")));
     } finally {
       if (!mounted) return;
       setState(() => loading = false);

@@ -1,4 +1,4 @@
-import 'auth_bridge.dart'; // Import the bridge helper we made
+// Import the bridge helper we made
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'forgot_password_page.dart';

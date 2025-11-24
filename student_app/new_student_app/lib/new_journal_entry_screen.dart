@@ -11,13 +11,11 @@ class NewJournalEntryScreen extends StatefulWidget {
 }
 
 class _NewJournalEntryScreenState extends State<NewJournalEntryScreen> {
-  final TextEditingController _entryController = TextEditingController();
-  final TextEditingController _titleController = TextEditingController();
-  final List<String> _tags = ['Stress', 'Study', 'Reflection'];
+  final _titleController = TextEditingController();
+  final _entryController = TextEditingController();
+  final List<String> _tags = ['Stress', 'Study', 'Reflection', 'Anxiety', 'Gratitude'];
   final List<String> _selectedTags = [];
   bool _isSaving = false;
-
-  final String? userId = FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void dispose() {
@@ -44,42 +42,51 @@ class _NewJournalEntryScreenState extends State<NewJournalEntryScreen> {
   }
 
   Future<void> _saveEntry() async {
-    if (userId == null) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('You must be logged in to save an entry.')),
       );
       return;
     }
 
-    final entryText = _entryController.text.trim();
-    final titleText = _titleController.text.trim();
-
-    if (entryText.isEmpty || titleText.isEmpty) return;
+    if (_titleController.text.isEmpty || _entryController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in all fields")),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
 
     try {
+      // 1. Save to Firestore IMMEDIATELY
+      // We send the manual tags selected by the user.
+      // We set 'sentiment' to null to trigger the Python Colab script.
       await FirebaseFirestore.instance.collection('journals').add({
-        'title': titleText,
-        'entry': entryText,
-        'tags': _selectedTags,
-        'created_at': Timestamp.now(),
-        'user_id': userId,
-        // Add a placeholder sentiment field to ensure the field always exists.
-        'sentiment': {
-          'analysis_status': 'pending',
-          'status': 'pending',
-        },
+        'user_id': user.uid,
+        'title': _titleController.text.trim(),
+        'entry': _entryController.text.trim(),
+        'manual_tags': _selectedTags, // Save user-selected tags separate from AI tags
+        'created_at': FieldValue.serverTimestamp(),
+        
+        // CRITICAL: Setting this to null triggers the Python script listener
+        'sentiment': null, 
       });
 
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Journal saved! AI analysis will happen in the background."),
+            backgroundColor: Colors.indigo,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to save entry: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -138,11 +145,13 @@ class _NewJournalEntryScreenState extends State<NewJournalEntryScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 12.0),
             child: IconButton(
-              icon: Icon(
-                Icons.check_circle,
-                color: theme.colorScheme.primary,
-                size: 28,
-              ),
+              icon: _isSaving 
+                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)) 
+                : Icon(
+                    Icons.check_circle,
+                    color: theme.colorScheme.primary,
+                    size: 28,
+                  ),
               onPressed: _isSaving ? null : _saveEntry,
             ),
           ),
@@ -227,7 +236,7 @@ class _NewJournalEntryScreenState extends State<NewJournalEntryScreen> {
 
             // 🌸 Tags Section
             Text(
-              'Tags',
+              'Tags (Optional)',
               style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -272,7 +281,7 @@ class _NewJournalEntryScreenState extends State<NewJournalEntryScreen> {
             ),
             const SizedBox(height: 40),
 
-            // 💾 Save Button
+            // 💾 Save Button (Bottom)
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -304,6 +313,18 @@ class _NewJournalEntryScreenState extends State<NewJournalEntryScreen> {
                       ),
               ),
             ),
+            if (_isSaving)
+              Padding(
+                padding: const EdgeInsets.only(top: 12.0, bottom: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.cloud_upload, color: Colors.grey, size: 16),
+                    const SizedBox(width: 8),
+                    Text("Syncing with AI...", style: GoogleFonts.poppins(color: Colors.grey)),
+                  ],
+                ),
+              ),
             const SizedBox(height: 16),
 
             // 🗑 Delete Button
