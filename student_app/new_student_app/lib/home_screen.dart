@@ -49,10 +49,18 @@ class _HomeScreenState extends State<HomeScreen> {
       // 1. Fetch User Name
       final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
       final userDoc = await userRef.get();
-
+      String? nameFromFirestore = userDoc.data()?['name'];
+      String? nameFromAuth = user.displayName;
+      String? resolvedName = nameFromFirestore;
+      if (resolvedName == null || resolvedName.trim().isEmpty) {
+        resolvedName = nameFromAuth;
+      }
+      if (resolvedName == null || resolvedName.trim().isEmpty) {
+        resolvedName = user.email ?? "User";
+      }
       if (mounted) {
         setState(() {
-          _userName = userDoc.data()?['name']; 
+          _userName = resolvedName;
         });
       }
 
@@ -277,7 +285,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 ),
                 Text(
-                  _userName ?? 'Guest',
+                  (user != null && !isGuest) ? (_userName ?? user.displayName ?? user.email ?? 'User') : 'Guest',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 20,
