@@ -39,13 +39,10 @@ service cloud.firestore {
 
     // Appointments collection
     match /appointments/{appointmentId} {
-      allow read: if isCounsellor() && 
-        (resource.data.counsellorId == request.auth.uid || isAdmin());
-      allow create: if isCounsellor();
-      allow update: if isCounsellor() && 
-        (resource.data.counsellorId == request.auth.uid || isAdmin());
-      allow delete: if isCounsellor() && 
-        (resource.data.counsellorId == request.auth.uid || isAdmin());
+      // Allow reading/updating/deleting if the document belongs to the student
+      allow read, update, delete: if request.auth != null && resource.data.student_id == request.auth.uid;
+      // Allow creating if the user sets 'student_id' to their own UID
+      allow create: if request.auth != null && request.resource.data.student_id == request.auth.uid;
     }
 
     // Journals collection

@@ -1,10 +1,18 @@
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, User, CheckCircle, X, RotateCcw, Eye } from "lucide-react";
+import React, { useState } from "react";
+import { 
+  Calendar, 
+  Clock, 
+  User, 
+  CheckCircle, 
+  X, 
+  RotateCcw, 
+  Eye, 
+  MoreHorizontal,
+  Filter
+} from 'lucide-react';
 
 const Appointments = () => {
+  // Mock Data
   const [appointments, setAppointments] = useState([
     {
       id: 1,
@@ -33,28 +41,34 @@ const Appointments = () => {
       status: "pending",
       priority: "high",
     },
+    // Add more mock appointments as needed
   ]);
 
-  const getStatusColor = (status: string) => {
+  const [showCalendar, setShowCalendar] = useState(false);
+
+  // Helper: Status Styles (Matches Dashboard Colors)
+  const getStatusStyles = (status) => {
     switch (status) {
-      case 'pending': return 'bg-warning-soft text-cta';
-      case 'approved': return 'bg-success-soft text-primary';
-      case 'rejected': return 'bg-destructive/10 text-destructive';
-      case 'rescheduled': return 'bg-info-soft text-accent';
-      default: return 'bg-muted text-muted-foreground';
+      case 'pending': return 'bg-orange-50 text-orange-700 border-orange-100';
+      case 'approved': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      case 'rejected': return 'bg-red-50 text-red-700 border-red-100';
+      case 'rescheduled': return 'bg-blue-50 text-blue-700 border-blue-100';
+      default: return 'bg-gray-100 text-gray-600 border-gray-200';
     }
   };
 
-  const getPriorityColor = (priority: string) => {
+  // Helper: Priority Styles
+  const getPriorityStyles = (priority) => {
     switch (priority) {
-      case 'high': return 'bg-destructive/10 text-destructive';
-      case 'medium': return 'bg-warning-soft text-cta';
-      case 'low': return 'bg-success-soft text-primary';
-      default: return 'bg-muted text-muted-foreground';
+      case 'high': return 'text-red-600 bg-red-50';
+      case 'medium': return 'text-orange-600 bg-orange-50';
+      case 'low': return 'text-emerald-600 bg-emerald-50';
+      default: return 'text-gray-600 bg-gray-50';
     }
   };
 
-  const handleAction = (id: number, action: string) => {
+  // Logic: Handle Status Change
+  const handleAction = (id, action) => {
     setAppointments(prev => 
       prev.map(apt => 
         apt.id === id ? { ...apt, status: action } : apt
@@ -63,88 +77,93 @@ const Appointments = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-8 animate-fade-in">
+      
+      {/* 1. Page Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-accent">Appointment Management</h1>
-          <p className="text-customBlue mt-2">
-            Review and manage student appointment requests
+          <h1 className="text-3xl font-bold text-gray-800">Appointment Management</h1>
+          <p className="text-gray-500 mt-1">
+            Review and manage student session requests.
           </p>
         </div>
-        <Button variant="cta">
-          <Calendar className="w-4 h-4 mr-2" />
-          View Calendar
-        </Button>
+        <div className="flex gap-3">
+          <button className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors text-sm shadow-sm flex items-center gap-2">
+            <Filter size={16} />
+            Filter
+          </button>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors text-sm shadow-sm flex items-center gap-2">
+            <Calendar size={16} />
+            View Calendar
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card className="shadow-card border-0">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-warning-soft flex items-center justify-center">
-                <Clock className="w-6 h-6 text-cta" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">8</p>
-                <p className="text-sm text-customBlue">Pending</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* 2. Quick Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* Card 1 */}
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center">
+            <Clock className="w-6 h-6 text-orange-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-800">8</p>
+            <p className="text-sm text-gray-500">Pending Requests</p>
+          </div>
+        </div>
         
-        <Card className="shadow-card border-0">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-success-soft flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">24</p>
-                <p className="text-sm text-customBlue">This Week</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Card 2 */}
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-lg bg-emerald-50 flex items-center justify-center">
+            <CheckCircle className="w-6 h-6 text-emerald-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-800">24</p>
+            <p className="text-sm text-gray-500">Approved This Week</p>
+          </div>
+        </div>
         
-        <Card className="shadow-card border-0">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-lg bg-info-soft flex items-center justify-center">
-                <User className="w-6 h-6 text-accent" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">156</p>
-                <p className="text-sm text-customBlue">Total Students</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Card 3 */}
+        <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+            <User className="w-6 h-6 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-800">156</p>
+            <p className="text-sm text-gray-500">Total Students</p>
+          </div>
+        </div>
       </div>
 
-      <Card className="shadow-card border-0">
-        <CardHeader>
-          <CardTitle className="text-accent">Appointment Requests</CardTitle>
-          <CardDescription>
-            Review and manage incoming appointment requests from students
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+      {/* 3. Main Appointments List */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-100">
+            <h2 className="text-lg font-bold text-gray-800">Appointment Requests</h2>
+            <p className="text-sm text-gray-500">Latest incoming requests requiring your attention.</p>
+        </div>
+
+        <div className="divide-y divide-gray-50">
             {appointments.map((appointment) => (
-              <div key={appointment.id} className="p-6 rounded-lg border border-border hover:shadow-soft transition-smooth">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-3">
+              <div key={appointment.id} className="p-6 hover:bg-gray-50 transition-colors">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  
+                  {/* Left Side: Info */}
+                  <div className="space-y-3 flex-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-foreground">{appointment.studentName}</h3>
-                      <Badge className={getPriorityColor(appointment.priority)}>
-                        {appointment.priority} priority
-                      </Badge>
-                      <Badge className={getStatusColor(appointment.status)}>
+                      <h3 className="font-semibold text-gray-800 text-lg">{appointment.studentName}</h3>
+                      
+                      {/* Status Badge */}
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${getStatusStyles(appointment.status)} uppercase tracking-wide`}>
                         {appointment.status}
-                      </Badge>
+                      </span>
+                      
+                      {/* Priority Badge */}
+                      <span className={`px-2 py-0.5 rounded-md text-xs font-medium ${getPriorityStyles(appointment.priority)}`}>
+                        {appointment.priority} priority
+                      </span>
                     </div>
                     
-                    <div className="flex items-center gap-6 text-sm text-customBlue">
+                    <div className="flex items-center gap-6 text-sm text-gray-500">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
                         {appointment.date}
@@ -155,50 +174,72 @@ const Appointments = () => {
                       </div>
                     </div>
                     
-                    <p className="text-sm text-foreground">{appointment.reason}</p>
+                    <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded-lg inline-block border border-gray-100">
+                        Reason: {appointment.reason}
+                    </p>
                   </div>
 
-                  {appointment.status === 'pending' && (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleAction(appointment.id, 'approved')}
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleAction(appointment.id, 'rescheduled')}
-                      >
-                        <RotateCcw className="w-4 h-4 mr-1" />
-                        Reschedule
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleAction(appointment.id, 'rejected')}
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Reject
-                      </Button>
-                    </div>
-                  )}
-                  
-                  {appointment.status !== 'pending' && (
-                    <Button size="sm" variant="ghost">
-                      <Eye className="w-4 h-4 mr-1" />
-                      View Details
-                    </Button>
-                  )}
+                  {/* Right Side: Actions */}
+                  <div className="flex items-center gap-2">
+                    {appointment.status === 'pending' ? (
+                      <>
+                        <button 
+                            onClick={() => handleAction(appointment.id, 'approved')}
+                            className="flex items-center gap-1 px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 text-sm font-medium transition-colors"
+                        >
+                          <CheckCircle className="w-4 h-4" /> Approve
+                        </button>
+                        
+                        <button 
+                            onClick={() => handleAction(appointment.id, 'rescheduled')}
+                            className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-sm font-medium transition-colors"
+                        >
+                          <RotateCcw className="w-4 h-4" /> Reschedule
+                        </button>
+                        
+                        <button 
+                            onClick={() => handleAction(appointment.id, 'rejected')}
+                            className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 text-sm font-medium transition-colors"
+                        >
+                          <X className="w-4 h-4" /> Reject
+                        </button>
+                      </>
+                    ) : (
+                      <button className="flex items-center gap-1 px-4 py-2 text-gray-500 hover:bg-gray-100 rounded-lg text-sm transition-colors">
+                         <Eye className="w-4 h-4" /> View Details
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
+        </div>
+      </div>
+
+      {/* Calendar Modal */}
+      {/* {showCalendar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md relative animate-fade-in">
+            <button
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-700"
+              onClick={() => setShowCalendar(false)}
+              aria-label="Close calendar"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <h2 className="text-xl font-bold text-blue-700 mb-4">Calendar</h2>
+            <ReactCalendar
+              onChange={setCalendarDate}
+              value={calendarDate}
+              className="rounded-lg border-blue-100 w-full"
+              tileClassName={({ date }) =>
+                appointments.some(a => a.date === date.toISOString().slice(0, 10))
+                  ? 'bg-blue-100 text-blue-700 font-bold' : ''
+              }
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )} */}
     </div>
   );
 };

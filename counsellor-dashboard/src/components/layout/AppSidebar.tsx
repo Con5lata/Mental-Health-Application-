@@ -34,26 +34,7 @@ const menuItems = [
     url: "/appointments",
     icon: Calendar,
   },
-  {
-    title: "Journals",
-    url: "/journals", 
-    icon: BookOpen,
-  },
-  {
-    title: "Resources",
-    url: "/resources",
-    icon: FolderOpen,
-  },
-  {
-    title: "Q&A",
-    url: "/qa",
-    icon: MessageSquare,
-  },
-  {
-    title: "Reports",
-    url: "/reports",
-    icon: BarChart3,
-  },
+  // Removed Journals, Resources, Q&A, and Reports
   {
     title: "Settings",
     url: "/settings",

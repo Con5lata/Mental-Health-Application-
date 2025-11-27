@@ -56,7 +56,12 @@ class _HomeScreenState extends State<HomeScreen> {
         resolvedName = nameFromAuth;
       }
       if (resolvedName == null || resolvedName.trim().isEmpty) {
-        resolvedName = user.email ?? "User";
+        // If email fallback, strip domain
+        if (user.email != null && user.email!.contains('@')) {
+          resolvedName = user.email!.split('@')[0];
+        } else {
+          resolvedName = "User";
+        }
       }
       if (mounted) {
         setState(() {
@@ -285,7 +290,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 ),
                 Text(
-                  (user != null && !isGuest) ? (_userName ?? user.displayName ?? user.email ?? 'User') : 'Guest',
+                  (user != null && !isGuest)
+                      ? (_userName ?? user.displayName ?? (user.email != null && user.email!.contains('@') ? user.email!.split('@')[0] : 'User'))
+                      : 'Guest',
                   style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 20,

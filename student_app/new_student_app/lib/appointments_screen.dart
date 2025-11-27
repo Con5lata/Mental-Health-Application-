@@ -19,8 +19,8 @@ class AppointmentsScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
     
     final appointmentsRef = FirebaseFirestore.instance
-        .collection('appointments')
-        .where('user_id', isEqualTo: user?.uid);
+      .collection('appointments')
+      .where('student_id', isEqualTo: user?.uid);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA), // Very soft grey background
@@ -375,7 +375,7 @@ class _ExpandableAppointmentCardState extends State<ExpandableAppointmentCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Reason for Appointment",
+                    "Reason for visit".toUpperCase(),
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,

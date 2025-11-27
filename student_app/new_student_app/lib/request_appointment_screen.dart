@@ -11,12 +11,12 @@ class RequestAppointmentPage extends StatefulWidget {
 
 class _RequestAppointmentPageState extends State<RequestAppointmentPage> {
   final TextEditingController _reasonController = TextEditingController();
-  String? _selectedCounsellorId;
+  // String? _selectedCounsellorId; // Removed counsellor selection
   DateTime? _selectedDate;
   bool _isSubmitting = false;
 
   Future<void> _submitAppointment() async {
-    if (_selectedCounsellorId == null || _selectedDate == null || _reasonController.text.isEmpty) {
+    if (_selectedDate == null || _reasonController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill in all fields')),
       );
@@ -30,7 +30,7 @@ class _RequestAppointmentPageState extends State<RequestAppointmentPage> {
 
       await FirebaseFirestore.instance.collection('appointments').add({
         'student_id': user?.uid,
-        'counsellor_id': _selectedCounsellorId, // ✅ correct field
+        'counsellor_id': null, // No counsellor assigned at request
         'reason': _reasonController.text.trim(),
         'slot': Timestamp.fromDate(_selectedDate!),
         'status': 'pending',
@@ -44,7 +44,6 @@ class _RequestAppointmentPageState extends State<RequestAppointmentPage> {
 
       _reasonController.clear();
       setState(() {
-        _selectedCounsellorId = null;
         _selectedDate = null;
       });
     } catch (e) {
@@ -108,46 +107,7 @@ class _RequestAppointmentPageState extends State<RequestAppointmentPage> {
         padding: const EdgeInsets.all(20.0),
         child: ListView(
           children: [
-            // --- Counsellor Dropdown (Load Once) ---
-            FutureBuilder<QuerySnapshot>(
-              future: FirebaseFirestore.instance
-                  .collection('users')
-                  .where('role', isEqualTo: 'counsellor')
-                  .get(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SizedBox.shrink(); // 🔹 no spinner
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Text('No counsellors available',
-                      style: TextStyle(color: Colors.grey));
-                }
-
-                final counsellors = snapshot.data!.docs;
-
-                return DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
-                    labelText: 'Select Counsellor',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                  ),
-                  initialValue: _selectedCounsellorId,
-                  items: counsellors.map((doc) {
-                    final data = doc.data() as Map<String, dynamic>;
-                    return DropdownMenuItem<String>(
-                      value: data['user_id'], // ✅ correct id
-                      child: Text(data['name']),
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() => _selectedCounsellorId = value);
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
+            // --- Counsellor Dropdown Removed ---
 
             // --- Reason Field ---
             TextField(

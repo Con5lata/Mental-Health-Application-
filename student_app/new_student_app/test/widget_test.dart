@@ -7,6 +7,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+// Update the import below to the correct path if your main.dart is in a different package or directory.
+// For example, if your main.dart is in 'lib/main.dart' of this project, use:
 import 'package:m_health/main.dart';
 
 void main() {
